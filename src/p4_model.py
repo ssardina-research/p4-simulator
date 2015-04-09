@@ -1,0 +1,447 @@
+# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+#
+# This file is part of "P4-Simulator" package.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+from math import fabs, sqrt 
+from random import randint
+from collections import deque
+
+
+class LogicalMap(object):
+    """
+    Logical representation of the map, allows it to be interrogated by other components.
+    This version returns float('inf') for non-traversable cells.
+    """
+
+    def __init__(self, mappath=None):
+        """Constructor. Sets default method calls, initialises class attributes,
+           calls _readMap()"""
+        self.SQRT2 = sqrt(2)
+        self.OCT_CONST = self.SQRT2-1
+        DEFAULT_HEIGHT = 512
+        DEFAULT_WIDTH = 512
+        self.uniform = True
+
+        # Default method calls. If getH() is called, by default run euclid(), etc.
+        self.getH = self._euclid
+        self.getAdjacents = self._getDiagAdjacents
+        self.isAdjacent = self._isDiagAdjacent
+        self.getCost = self._getDiagCost
+        self.neighbours = []
+
+        # terrain types in costs dict will be replaced by values from map header
+        self.costs = {".": "ground", "G": "ground", "0": float('inf'),
+                      "@": float('inf'), "S": "swamp", "T": "tree", "W": "water"}
+
+        self.neighbourDic = {}
+
+        # Each key is store in the map as (key_location) : [ d1, d2, ... ] where d1, d2, ... are the location of
+        # the door.
+        self.key_and_doors = {}
+
+        if mappath is not None:
+            #print("Opening " + mappath)
+            self._readMap(mappath)
+            # if readMap fails, SystemExit reports to command line and quits
+            if self.matrix is None:
+                print("Failed to load file!\n")
+                raise SystemExit
+        else:
+
+            # if mappath == None, readMap not attempted and default-sized matrix is all set to '.'
+            self.matrix = [["." for col in range(DEFAULT_WIDTH)]
+                           for row in range(DEFAULT_HEIGHT)]
+            self.info = {"height": DEFAULT_HEIGHT, "width": DEFAULT_WIDTH}
+            self.costs["."] = 1
+
+    def _getDiffAdjs(self, coord):
+        """returns adjacents with different cost from cell passed in as coord
+        :type coord: tuple
+        """
+        diffs = []
+        cost = self.costs[self.getCell(coord)]
+        adjlist = self.getAdjacents(coord)
+        for adj in adjlist:
+            if not self.costs[self.getCell(adj)] == cost:
+                diffs.append(adj)
+        return diffs
+
+    def _hasDiffAdj(self, coord):
+        """returns true if any adjacent has different cost from cell passed in as coord
+        :type coord: tuple
+        """
+        cost = self.costs[self.getCell(coord)]
+        adjlist = self.getAdjacents(coord)
+        for adj in adjlist:
+            if not self.costs[self.getCell(adj)] == cost:
+                return True
+        return False
+
+    def hasDiffAdj(self, coord):
+        """ precondition: must have run preprocessMap. Returns result by direct query
+        to neighbours"""
+        return self.neighbours[coord[0]][coord[1]]
+
+    def getDiffAdjs(self, coord):
+        """  precondition: must have run preprocessMap. Returns result by direct query
+        to neighbourDic"""
+        return filter(self.isPassable, self.neighbourDic[coord])
+
+    def setHeuristic(self, h="euclid"):
+        """Explicitly set method used when getH() is called."""
+        if h == "euclid":  
+            self.getH = self._euclid
+        elif h == "octile":
+            self.getH = self._octile
+        else:
+            self.getH = self._manhattan
+
+    def setDiagonal(self, d):
+        """Explicitly set methods to be used when getAdjacents() or isAdjacent() called."""
+        if d is None or d:  # default
+            self.getAdjacents = self._getDiagAdjacents
+            self.isAdjacent = self._isDiagAdjacent
+            self.getCost = self._getDiagCost
+        else:
+            self.getAdjacents = self._getNonDiagAdjacents
+            self.isAdjacent = self._isNonDiagAdjacent
+            self.getCost = self._getNonDiagCost
+
+    def getCell(self, position):
+        """Returns character at (col, row) representing type of terrain there. Returns @ (oob) if call fails
+        :type col: int
+        :type row: int
+        """
+        (col, row) = position
+        col = int(col)
+        row = int(row)
+        if self.cellWithinBoundaries((col, row)):
+            return self.matrix[col][row]
+        else:
+            return '@'
+
+    def isKey(self, position):
+        """
+        Return true if and only if the (col,row) is a key.
+        :type row: int
+        :type col: int
+        :rtype : bool
+        :return:
+        """
+        (col, row) = position
+        return (col, row) in self.key_and_doors.keys()
+
+    def isDoor(self, position):
+        """
+        Return true if and only if the (col,row) is a door.
+        :rtype : bool
+        :type row: int
+        :type col: int
+        :return:
+        """
+        (col, row) = position
+        for k in self.key_and_doors:
+            if (col, row) in self.key_and_doors[k]:
+                return True
+        return False
+
+    def hasKeyForDoor(self, door, keys):
+        """
+        :param door: The door coordinate.
+        :param keys: The list of available keys.
+        :return: True iff agent has the key for the door.
+        """
+        if keys is None:
+            return False
+        for k in keys:
+            if door in self.key_and_doors[k]:
+                return True
+        return False      
+    
+    def _getDiagCost(self, coord, previous=None, keys=None):
+        """
+        Returns the cost of the terrain type at coord, read from costs dictionary.
+        If previous supplied, return val based on relative locations to prohibit corner-cutting
+        """
+
+        # water is only passable from other water (added to conform to movingai restriction
+        # but commented out to facilitate eval on mixed-cost maps - as below)
+        # if self.getCell(coord) == "W" and previous and not self.getCell(previous) == "W":
+        # return float('inf')
+
+        if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
+            return float('inf')
+
+        # get the terrain type for coord
+        coord_type = self.getCell(coord)
+        
+        isDiagonalMove = bool(previous and self.isDiag(previous, coord))
+        
+        if isDiagonalMove:
+            # diagonal move - need to check corner cutting
+            coord_x, coord_y = coord
+            previous_x, previous_y = previous
+            dX = previous_x - coord_x
+            dY = previous_y - coord_y
+
+            # check corner cutting
+            if self.isPassable((coord_x, coord_y + dY), keys=keys) and self.isPassable((coord_x + dX, coord_y), keys=keys):
+                if self.uniform:
+                    return self.costs[coord_type] * self.SQRT2
+                else:
+                    return self.costs[coord_type]
+            else:
+                return float('inf')
+        else:
+            return self.costs[coord_type]
+
+        
+        
+    def _getNonDiagCost(self, coord, previous=None, keys=None):
+        """
+        Returns the cost of the terrain type at coord, read from costs dictionary.
+        :type previous: (int,int)
+        :type coord: (int,int)
+        :param coord: The coordinates
+        :param previous:  The previous coordinates. If previous supplied, calc based on relative locations
+        :rtype : float
+        """
+        # water is only passable from other water - test removed as above to facilitate
+        # eval with mixed-cost maps - if restoring, restore in both places.
+        # try:
+        # if self.getCell(coord) == "W" and previous and not self.getCell(previous) == "W":
+        # return float('inf')
+        # except:
+        # return float('inf')
+        # else:
+        if previous and self.isDiag(previous, coord):
+            return float('inf')
+        else:
+            return self.costs[self.getCell(coord)]
+            
+    @property
+    def height(self):
+        """
+        Returns height of map based on number of characters in first row, which may
+        differ from map header. Note characters are reorganised to read back as col,row
+        :rtype : int
+        """
+        return len(self.matrix[0])
+
+    @property
+    def width(self):
+        """
+        Returns width of map based on number of rows, which may differ from
+        map header. Note characters are reorganised to read back as col,row
+        :rtype : int
+        """
+        return len(self.matrix)
+
+    @staticmethod
+    def isDiag(a, b):
+        """
+        Returns true if these adjacent coordinates are on a diagonal
+        :type b: (int,int)
+        :type a: (int,int)
+        :rtype : bool
+        """
+        return (fabs(a[0] - b[0]) == 1) and (fabs(a[1] - b[1]) == 1)
+
+    @staticmethod
+    def _isDiagAdjacent(a, b):
+        """Internal. Checks 8 ways. Called as isAdjacent() when DIAGONAL set to True"""
+        return (fabs(a[0] - b[0]) <= 1) and (fabs(a[1] - b[1]) <= 1)
+
+    @staticmethod
+    def _isNonDiagAdjacent(a, b):
+        """Internal. Checks 4 ways. Called as isAdjacent() when DIAGONAL set to False"""
+        return (a[0] == b[0] and fabs(a[1] - b[1]) == 1) or (a[1] == b[1] and fabs(a[0] - b[0]) == 1)
+
+    def isCellTraversable(self, coord, keys=None):
+        """
+        Returns whether coord cell is traversable by itself or not
+        """
+        # if there is a door in coord but we don't have the key, then it is not traversable
+        if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
+            return False
+        else:
+            return self.costs[self.getCell(coord)] < float('inf')
+
+    def isPassable(self, coord, previous=None, keys=None):
+#     def isPassable(self, coord, keys=None):
+        """
+        If previous not give, returns True if the terrain at coord is passable, False otherwise.
+        If previous is give, returns True if the terrain at coord is passable and move from previous-->cord is legal, False otherwise.
+        :type keys: ((int,int))
+        :rtype : bool
+        """
+        if previous:
+            return not self.getCost(coord, previous, keys) == float('inf') 
+        else:
+            return self.isCellTraversable(coord, keys)
+
+    def nearestPassable(self, current=None):
+        """Tests coordinate passed in as current to make sure it's passable. If not,
+           conducts breadth first search to identify nearest passable and returns that.
+           If no coord passed in, generates one randomly."""
+        if not current:
+            return self.generateCoord()
+        if not self.cellWithinBoundaries(current):
+            current = self.placeOnMap(current);
+        q = deque()  # fastest append/pop
+        L = []  # ordinary list
+        closed = set()  # fastest membership test
+        closed.add(current)
+        while not self.isPassable(current):
+            L = self.getAllAdjacents(current)
+            for adj in L:
+                if adj not in closed and adj not in q:
+                    q.append(adj)
+            current = q.popleft()
+            closed.add(current)
+        return current
+
+    def generateCoord(self):
+        """Randomly generate new coordinate and return nearest passable."""
+        x = randint(10, self.width - 10)  # allow 10 pixel margin, so not right at edge
+        y = randint(10, self.height - 10)
+        return self.nearestPassable((x, y))
+        
+    def placeOnMap(self, coord):
+        """Return coordinate moved onto map"""
+        col, row = coord
+        if col > self.width:
+            col = self.width - 1
+        elif col < 0:
+            col = 0
+        if row > self.height:
+            row = self.height - 1
+        elif row < 0:
+            row = 0
+        return (col, row)
+
+    def getAllAdjacents(self, position):
+        """Return all adjacent coordinates - horizontal, vertical and diagonal -  whether
+           or not they are passable, and regardless of config file setting for DIAGONAL."""
+        (col, row) = position
+        L = []
+        for x in range(col - 1, col + 2):
+            for y in range(row - 1, row + 2):
+                if (x == col and y == row) or x < 0 or y < 0 or x > self.width - 1 or \
+                        y > self.height - 1:
+                    continue
+                L.append((x, y))
+        return L
+
+    def _getDiagAdjacents(self, position):
+        """Internal. Returns 8 neighbours. Called as getAdjacents() when DIAGONAL set to True"""
+        (col, row) = position
+        col = int(col)
+        row = int(row)
+        L = [(x, y)
+             for x in range(col - 1, col + 2)
+             for y in range(row - 1, row + 2)
+             if not ((x == col and y == row) or x < 0 or y < 0 or x > self.width - 1 or y > self.height - 1)
+        ]
+        return L
+
+    def _getNonDiagAdjacents(self, position):
+        """Internal. Returns 4 neighbours. Called as getAdjacents() when DIAGONAL set to False"""
+        (col, row) = position
+        L = []
+        if col > 0:
+            L.append((col - 1, row))
+        if col + 1 < self.width - 1:
+            L.append((col + 1, row))
+        if row > 0:
+            L.append((col, row - 1))
+        if row + 1 < self.height - 1:
+            L.append((col, row + 1))
+        return L
+
+    def _euclid(self, current, goal):
+        """Internal. Called as getH() if HEURISTIC set to 'euclid'"""
+        xlen = current[0] - goal[0]
+        ylen = current[1] - goal[1]
+        return sqrt(xlen * xlen + ylen * ylen)
+
+    def _manhattan(self, current, goal):
+        """Internal. Called as getH() if HEURISTIC set to 'manhattan'"""
+        return fabs((current[0] - goal[0]) + (current[1] - goal[1]))
+        
+    def _octile(self, current, goal):
+        """Internal. Called as getH() if HEURISTIC set to 'octile'"""
+        xlen = current[0] - goal[0]
+        ylen = current[1] - goal[1]
+        return max(xlen,ylen) + self.OCT_CONST * min(xlen,ylen)
+
+    def _readMap(self, mappath):
+        """
+        Internal. Generates matrix. Initialises info and populates costs.
+        Called from init. Sets matrix to None if map load fails.
+        Differentiates between uniform and non-uniform cost based on length
+        map header.
+        """
+        self.info = {}
+        try:
+            with open(mappath, "r") as f:
+                #print("Parsing")
+                for line in f:
+                    if line.strip() == 'map':
+                        break
+                    parsed = line.split()
+                    key = parsed[0]
+                    if key == "type":
+                        continue
+                    elif parsed[1] == "+inf":
+                        self.info[key] = float("inf")
+                    elif key == "key":
+                        i = 3
+                        key_location = (int(parsed[1]), int(parsed[2]))
+                        self.key_and_doors[key_location] = []
+                        while i + 1 < len(parsed):
+                            self.key_and_doors[key_location].append((int(parsed[i]), int(parsed[i + 1])))
+                            i += 2
+                        #print(self.key_and_doors)
+                    else:
+                        self.info[key] = int(parsed[1])
+                # generate matrix - using 'zip' so that it reads back (col, row)
+                _matrix = [list(line.rstrip()) for line in f]
+                self.matrix = list(zip(*_matrix))
+                # replace terrain types with costs
+                if len(self.info.keys()) < 3:
+                    self.uniform = True
+                    self.costs["."] = 1
+                    self.costs["S"] = 1
+                    self.costs["G"] = 1
+                    # getCost returns inf for W if accessed from other than W
+                    self.costs["W"] = 1
+                    self.costs["T"] = float('inf')
+                else:
+                    self.uniform = False
+                    for terrain in self.info:
+                        for abbrev in self.costs:
+                            if terrain == self.costs[abbrev]:
+                                self.costs[abbrev] = self.info[terrain]
+
+        except EnvironmentError:
+            print("::: Error Parsing Map File")
+            self.matrix = None
+
+    
+    def cellWithinBoundaries(self, node):
+        """ just checks if node is on map"""
+        return 0 <= node[0] < self.width and 0 <= node[1] < self.height

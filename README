@@ -1,0 +1,175 @@
+#############################################################################
+# p4 Simulator - Python Path Planning Project
+#
+# Copyright (C) 2013-2015 Peta Masters and Sebastian Sardina
+#
+# Version 2.1 - April 2015
+#############################################################################
+
+INTRODUCTION
+============
+
+p4 (aka the "Python Path Planning Project") began as a Python 2.7
+implementation of the Apparate path-planning simulator. It has been developed
+and extended to support my Honours thesis (see docs/thesis) under the
+guidance of Sebastian Sardina.
+
+Use p4 to run search algorithms on maps presented in movingai format (see
+www.movingai.com). Run with GUI, to observe their operation, without GUI to
+obtain cost, steps and time-taken, or in auto mode to output csv files
+of results for accumulated results from map problems in .scen format (also
+from movingai).
+
+p4 can be run from the command line or from within a wrapper script. In 
+automatic mode, all info statements to the command line are supressed 
+and output is delivered in csv format. 
+
+
+USAGE
+=====
+
+
+ # python p4.py -h
+
+Displays a help screen, with similar info to that shown here
+
+ # python p4.py [<config_file>]
+
+The config_file supplies settings as Python variables and includes information
+such as what map and search algorithm to use. See config.py for expected format.
+If config_file or file path not supplied, looks for default config.py.
+
+ # python p4.py -m <MAP_FILE> -s <START> -g <GOAL> -a <AGENT_FILE> \
+ 	[-d <DEADLINE> -f <FREE_TIME> -e <euclid|manhattan> -r <SPEED> -nodiag -gui -auto]
+   where:
+      MAP_FILE is a file in movingai format, saved to the MAPS sister folder
+      AGENT_FILE is a file with prescribed API, saved to the AGENTS subfolder
+      START is a tuple with start location in (col,row) format
+      GOAL is a tuple with goal location in (col,row) format
+      DEADLINE is time limit in seconds, defaults to None
+      SPEED is a time delay in seconds between moves, defaults to 0
+      TIMER defaults to clock
+      FREE_TIME seconds to consider a step "for free"
+      -nodiag - default=True, disallows diagonal moves 
+      -gui - default=False, displays gui
+      -auto - default=False, suppresses info messages and outputs result in csv format
+
+Run the GUI with a random agent:
+
+      
+   # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui
+
+
+An example of a command line call is (run this from inside src/)
+
+   Run ASTAR in ../maps/testmap.map (around 0.26secs):
+   
+   # python p4.py -m testmap.map -s 155,123 -g 309,203 -a agent_astar  -e euclid -d 20
+   or in Windows:
+     python p4.py -m testmap.map -s (155,123) -g (309,203) -a agent_astar  -e euclid -d 20
+
+   Run ASTAR in a harder problem with a solution of cost 510.41 and 440 steps ( (around 1.5secs):
+   
+   # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_astar  -e euclid -d 20
+    or in Windows:
+     python p4.py -m AR0306SR.map  -s (218,110) -g (444,386) -a agent_astar  -e euclid -d 20
+    
+   Same but using JPS (around 0.4secs):
+
+   # python p4.py -m AR0306SR.map -s 218,110 -g 444,386 -a agent_jps  -e euclid -d 20
+    or in Windows:
+     python p4.py -m AR0306SR.map -s (218,110) -g (444,386) -a agent_jps  -e euclid -d 20
+    
+Output is of the form:
+
+       Total Cost : 510.416305603 | Total Steps : 440 | Time Remaining : 19.519 | Total Time : 0.48086
+
+Total Cost: total cost of the solution plan; moves may be non-uniform and diagonal moves cost more than straight moves
+Total Steps: number of steps that the plan takes
+Time Remaining: time left to deadline given
+Total Time: time taken (Total Time + Time Remaining = Deadline)
+
+In -auto mode, output is in csv format: cost;steps;time_taken;time_remaining e.g:
+    187.13708499;154;0.32759;19.672
+
+
+
+
+BATCH & PROFILING (UNIX)
+========================
+
+a) Profile a run:
+
+        /usr/bin/python -m cProfile p4.py -s time -m ../maps/AR0306SR.map  -s 218,110 -g 444,386 -a agent_astar -e euclid -d 20
+
+        -s time : sorts by total time (without taking internal calls)
+        -s comulative : sorts by cummulative time (taking all internal calls into account)
+
+b) Run it 10 times and get the average time:
+
+    run 10 /usr/bin/python  p4.py -m ../maps/AR0306SR.map  -s 218,110 -g 444,386 -a agent_jps_inv -e euclid -d 20 | grep Cost | awk '{total += $19} END {print total/10}'
+
+
+Function run() should be defined (e.g., in .bashrc) as follows:
+
+#function run
+run() {
+    number=$1
+    shift
+    for i in `seq $number`; do
+      bash $@
+    done
+}
+
+
+
+DIR STRUCTURE
+=============
+
+Supplied Files include:
+
+[docs]
+   V1 - includes useful test scripts in the FullProjectDoco
+   UserGuide
+   DevGuide
+[maps]
+   blasted.map
+   maze1.map
+   maze2.map
+   diamond-256.map
+   battleground.map
+   bloodvenomfalls.map
+   diamond-512.map
+   donkeykong.map
+[src]
+   config.py - settings
+   p4.py - script to launch p4
+   p4_controller
+   p4_graph
+   p4_model
+   p4_view
+   p4_view_map
+   p4_utils
+   [agents]
+      __init__.py
+      agent_astar       - A*
+      agent_das         - Deadline Aware Search
+      agent_greedy 
+      agent_jps         - Jump Point Search
+      agent_random
+      agent_rta         - Real Time A*
+      agent_rwa         - Restart Weighted A*
+
+TECHNICAL INFO
+==============
+
+By default, algorithms are timed using time.clock(). Switch to time.time() by
+resetting the global variable in p4_utils.py. p4_utils also controls colors
+used to display returned lists. p4_utils.py provides settings and p4_model.py
+presents an interface you can interrogate when implementing your own agents/
+algorithms. For a detailed explanation of how to go about it, check the User
+Guide and/or examine the supplied agent files.
+
+#############################################################################
+# EOF
+#############################################################################

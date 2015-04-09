@@ -1,0 +1,5 @@
+testresults*
+InvJPS.*
+*.e*
+output_*.txt
+*.pyc
