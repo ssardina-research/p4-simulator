@@ -81,7 +81,7 @@ class SimController(object):
         
         #we distinguish 3 modes - config file, CLI or auto (i.e. CLI but on a loop).
         if cfgfile is not None:
-            self.readConfig(cfgfile)
+            self.readConfig()
             self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
         else:
             try:
@@ -142,14 +142,15 @@ class SimController(object):
         except:
             raise p4.BadAgentException()
 
-    def readConfig(self, filename="config.py"):
+    def readConfig(self):
         """
         Reads config file into self.cfg dictionary. Initialises
-        lmap, agent,  and gen. 
+        lmap, agent,  and gen. May be called from p4_view (menu option).
 
         :type filename: string
         """
-        
+        filename = self.cfg.get("CFG_FILE")
+            
         if self.cfg.get("AUTO") is False:
             print("Reading " + filename)
         try:
