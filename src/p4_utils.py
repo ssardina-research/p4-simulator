@@ -39,6 +39,19 @@ G_POS = 1   # g cost so far
 C_POS = 2   # current coord, formatted (col,row)
 P_POS = 3   # parent coord, formatted (col,row)
 
+def addVectors(a,b):
+    return (a[0]+b[0],a[1]+b[1])
+    
+def getBlock(topleft,botright):
+    """Returns list of coordinates in nominated block - domain agnostic"""
+    a1, a2 = topleft
+    b1, b2 = botright
+    #TODO - appropriate list comprehension eludes me!
+    L=[]
+    for x in range(a1,b1+1):
+        for y in range(a2,b2+1):
+            L.append((x,y))
+    return L
           
 class BadMapException(Exception):
     pass

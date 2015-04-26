@@ -132,7 +132,7 @@ class LogicalMap(object):
             return self.matrix[col][row]
         else:
             return '@'
-
+        
     def isKey(self, position):
         """
         Return true if and only if the (col,row) is a key.
@@ -355,6 +355,7 @@ class LogicalMap(object):
              for x in range(col - 1, col + 2)
              for y in range(row - 1, row + 2)
              if not ((x == col and y == row) or x < 0 or y < 0 or x > self.width - 1 or y > self.height - 1)
+             #if (x,y) is not position and self.cellWithinBoundaries((x,y)) 
         ]
         return L
 
@@ -420,7 +421,8 @@ class LogicalMap(object):
                         self.info[key] = int(parsed[1])
                 # generate matrix - using 'zip' so that it reads back (col, row)
                 _matrix = [list(line.rstrip()) for line in f]
-                self.matrix = list(zip(*_matrix))
+                self.matrix = [list(x) for x in zip(*_matrix)]  #make it a list so can change it
+                #self.matrix = list(zip(*_matrix))
                 # replace terrain types with costs
                 if len(self.info.keys()) < 3:
                     self.uniform = True
@@ -445,3 +447,13 @@ class LogicalMap(object):
     def cellWithinBoundaries(self, node):
         """ just checks if node is on map"""
         return 0 <= node[0] < self.width and 0 <= node[1] < self.height
+        
+    def setPoints(self, terrain, pointlist):
+        for each in pointlist:
+            self.setCell(terrain, each)
+            
+    def setCell(self, char, position):
+        """Modifies matrix. Ignores if char is invalid terrain type or position is off-map"""
+        if char in self.costs and self.cellWithinBoundaries(position):
+            x, y = position
+            self.matrix[x][y] = char

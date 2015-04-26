@@ -72,6 +72,11 @@ class Gui(Tkinter.Tk):
         """draws cross at goal position"""
         self.vmap.drawCross(goal, p4.COL_GOAL)
         self.goal = goal  #position is saved, so it can be cleared
+        
+    def clearPoints(self, pointlist):
+        """sends list of points to vmap to be redrawn/cleared 
+        based on current lmap"""
+        self.vmap.clear(pointlist, self.lmap)
 
     #EVENT HANDLERS
     def key(self, event):
@@ -189,9 +194,12 @@ class Gui(Tkinter.Tk):
         self.vmap.clearCross(self.start, self.lmap)
         self.simulator.setStart()
 
+    def clearGoal(self):
+        self.vmap.clearCross(self.goal, self.lmap)
+        
     def resetGoal(self):
         """Menu listener. Clears cross from old pos and calls SimController to reset """
-        self.vmap.clearCross(self.goal, self.lmap)
+        self.clearGoal()
         self.simulator.setGoal()
 
     def mBox(self, msg):
