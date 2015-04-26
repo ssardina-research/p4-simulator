@@ -269,7 +269,7 @@ class SimController(object):
         :rtype : (int,int)
         """
         while True:
-            
+            target = self.cfg["GOAL"]
             if self.gotscript:
                 if self.pathsteps in self.gc:
                     target = self.lmap.nearestPassable(self.gc.get(self.pathsteps))
