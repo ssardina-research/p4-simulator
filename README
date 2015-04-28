@@ -94,6 +94,12 @@ In -auto mode, output is in csv format: cost;steps;time_taken;time_remaining e.g
 
 
 
+For a dynamic run, rename script-test.py to script.py (in src/) and run:
+
+	 python p4.py -m testmap.map -s 155,123 -g 309,203 -a agent_astar  -e euclid -d 20 -gui	
+
+There will be some changes at steps 30 and 60 in the goal, and the agent will re-plan its path.
+
 
 BATCH & PROFILING (UNIX)
 ========================

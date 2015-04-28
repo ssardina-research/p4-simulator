@@ -12,7 +12,7 @@ TERRAIN_CHANGE = {}
 #step: (col, row)
 GOAL_CHANGE = {
     30: (255,101),
-    60: (101,101),
+    60: (282,407),
 }
 
 #Move agent relative to current position
