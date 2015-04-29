@@ -352,8 +352,11 @@ class SimController(object):
         if not self.current == self.cfg["GOAL"] and self.timeremaining:
 
             try:
-                with Timeout(self.timeout):
-                    nextreturn = next(self.gen)
+                if self.timeout < float('inf'):
+                    with Timeout(self.timeout):  # call under SIGNAL
+                        nextreturn = self.gen.next()
+                else:
+                    nextreturn = self.gen.next()  # call with no SIGNAL
             except Timeout.Timeout:
                 if self.timeremaining < 0:
                     self.timeremaining = 0
@@ -393,6 +396,7 @@ class SimController(object):
                                    '{0:.5g}'.format(self.timeremaining)
                     self.updateStatus(message)
                     sleep(self.cfg.get("SPEED"))  # delay, if any
+                    
 
     # MENU HANDLERS
     def loadMap(self, mapfile):
