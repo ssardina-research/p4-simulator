@@ -28,5 +28,6 @@ DEADLINE = 15               #Number of seconds to reach goal
 HEURISTIC = 'euclid'        #may be 'euclid' or 'manhattan'
 DIAGONAL = True             #True = allow diagonal path, False = disallow
 FREE_TIME = 0.000           #Steps greater than this are timed (if 0, all steps are timed)
+DYNAMIC = False             #Implements runtime changes found in script.py when True
 
 

@@ -80,8 +80,8 @@ class SimController(object):
         self.coordsets = None  # sets of coordinates that will need to be reset
 
         self.cfg = args     # Default params as modified via CLI
-        self.script = {}  # Allows for dynamic changes
         self.gotscript = False
+        self.script = {}  # Allows for dynamic changes
         
         #we distinguish 3 modes - config file, CLI or auto (i.e. CLI but on a loop).
         if cfgfile is not None:
@@ -115,8 +115,6 @@ class SimController(object):
                 print(traceback.format_exc())
                 raise SystemExit()
         
-        #check for script file and load if it exists
-        self.loadScript()
         if self.cfg.get("GUI"):
             self.initGui()
         else:
@@ -213,6 +211,12 @@ class SimController(object):
         else:
             self.timeout = self.timeremaining * 2
         self.current = self.cfg["START"]
+        
+        #check for script file and load if it exists
+        if self.cfg["DYNAMIC"] is True:
+            self.loadScript()   #sets self.gotscript
+        elif self.gotscript is True:
+            self.gotscript = False
 
         # reconfigure generator based on current config
         self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
@@ -268,15 +272,10 @@ class SimController(object):
         :type target: (int,int)
         :rtype : (int,int)
         """
+        
         while True:
             target = self.cfg["GOAL"]
             if self.gotscript:
-                if self.pathsteps in self.gc:
-                    target = self.lmap.nearestPassable(self.gc.get(self.pathsteps))
-                    self.setGoal(target)
-                if self.pathsteps in self.ac:
-                    newpos = p4.addVectors(current,self.ac.get(self.pathsteps))
-                    current = self.lmap.nearestPassable(newpos)
                 if self.pathsteps in self.tc:
                     terrain, topleft, botright = self.tc.get(self.pathsteps)
                     pointlist = p4.getBlock(topleft,botright)
@@ -285,8 +284,15 @@ class SimController(object):
                     #change in gui, if running
                     try:
                         self.gui.clearPoints(pointlist)
-                    except AttributeError:  #simulator has no gui
+                    except:
                         pass
+                if self.pathsteps in self.gc:
+                    target = self.lmap.nearestPassable(self.gc.get(self.pathsteps))
+                    self.setGoal(target)
+                if self.pathsteps in self.ac:
+                    newpos = p4.addVectors(current,self.ac.get(self.pathsteps))
+                    current = self.lmap.nearestPassable(newpos)
+                    yield newpos    #scripted move is not costed or counted
             try:
                 clockstart = timer()  # start timer
                 nextreturn = self.agent.getNext(self.lmap, current, target, self.timeremaining)
@@ -411,6 +417,8 @@ class SimController(object):
                 except TypeError:
                     nextstep = nextreturn
                 else:
+                    #something to draw
+                    #self.updateStatus("Drawing...", False)
                     nextstep, coordsets = nextreturn
                     for coordset in coordsets:
                         if coordset[1] == 'reset':
@@ -421,6 +429,7 @@ class SimController(object):
                     self.gui.setGoal(self.cfg["GOAL"])
                     self.fullsearchflag = True
                     self.coordsets = coordsets
+                    #self.updateStatus("Plotting path...", False)
                 finally:  # paint path
                     self.gui.vmap.drawSet(self.path, "blue")
                     self.gui.vmap.drawPoint(nextstep, "white")
@@ -545,13 +554,17 @@ class SimController(object):
                 print(msg)
 
     def loadScript(self):
-        if os.path.isfile('script.py'):
+        try:
             execfile('script.py', self.script)
             self.gc = self.script.get("GOAL_CHANGE")
             self.gc["ORIGIN"] = self.cfg["GOAL"]    #save in case of reset
             self.tc = self.script.get("TERRAIN_CHANGE")
             self.ac = self.script.get("AGENT_CHANGE")
             self.gotscript = True
+            self.updateStatus("Loaded script")
+        except: #we don't care why it failed
+            self.updateStatus("Failed to load script.py")
+            
 
 if __name__ == '__main__':
     print("To run the P4 Simulator, type 'python p4.py' " + \
