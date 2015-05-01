@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2015 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -14,6 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+# 20/4/15: modified for dynamic changes
 
 import os
 import imp
@@ -78,6 +80,8 @@ class SimController(object):
         self.coordsets = None  # sets of coordinates that will need to be reset
 
         self.cfg = args     # Default params as modified via CLI
+        self.gotscript = False
+        self.script = {}  # Allows for dynamic changes
         
         #we distinguish 3 modes - config file, CLI or auto (i.e. CLI but on a loop).
         if cfgfile is not None:
@@ -110,7 +114,7 @@ class SimController(object):
                 import traceback
                 print(traceback.format_exc())
                 raise SystemExit()
-                
+        
         if self.cfg.get("GUI"):
             self.initGui()
         else:
@@ -207,6 +211,12 @@ class SimController(object):
         else:
             self.timeout = self.timeremaining * 2
         self.current = self.cfg["START"]
+        
+        #check for script file and load if it exists
+        if self.cfg["DYNAMIC"] is True:
+            self.loadScript()   #sets self.gotscript
+        elif self.gotscript is True:
+            self.gotscript = False
 
         # reconfigure generator based on current config
         self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
@@ -262,7 +272,27 @@ class SimController(object):
         :type target: (int,int)
         :rtype : (int,int)
         """
+        
         while True:
+            target = self.cfg["GOAL"]
+            if self.gotscript:
+                if self.pathsteps in self.tc:
+                    terrain, topleft, botright = self.tc.get(self.pathsteps)
+                    pointlist = p4.getBlock(topleft,botright)
+                    #change logical map
+                    self.lmap.setPoints(terrain, pointlist)
+                    #change in gui, if running
+                    try:
+                        self.gui.clearPoints(pointlist)
+                    except:
+                        pass
+                if self.pathsteps in self.gc:
+                    target = self.lmap.nearestPassable(self.gc.get(self.pathsteps))
+                    self.setGoal(target)
+                if self.pathsteps in self.ac:
+                    newpos = p4.addVectors(current,self.ac.get(self.pathsteps))
+                    current = self.lmap.nearestPassable(newpos)
+                    yield newpos    #scripted move is not costed or counted
             try:
                 clockstart = timer()  # start timer
                 nextreturn = self.agent.getNext(self.lmap, current, target, self.timeremaining)
@@ -292,29 +322,41 @@ class SimController(object):
                 # We now consider every door open. In fact, we are just computing the final path cost, we are not
                 # searching for it. So is reasonable to assume that I have all the keys along the path.
                 allkeys = [k for k in self.lmap.key_and_doors.keys()]
-                self.pathcost += self.lmap.getCost(current, previous, allkeys)
+                cost = self.lmap.getCost(current, previous, allkeys)
+                #self.pathcost += self.lmap.getCost(current, previous, allkeys)
+                if not self.lmap.isAdjacent(current,previous):
+                    cost = float('inf')
+                self.pathcost += cost
                 # agent has made illegal move:
-                if self.pathcost == float('inf'):
+                if cost == float('inf'):
                     if not self.cfg.get("AUTO"):
-                        print("infinity at ", current, ":", self.lmap.getCost(current))
+                        print("infinity at step " + str(self.pathsteps-1) + ", " + str(current) + ":" + str(self.lmap.getCost(current)))
 
             yield nextreturn
 
     # BUTTON HANDLERS
     def hdlReset(self, msg="OK"):
         """Button handler. Clears map, resets gui and calls setVars"""
-        # clear map
-        self.gui.vmap.clear(self.path, self.lmap)
-        if self.fullsearchflag:
-            self.updateStatus("Redrawing map")
-            self.updateStatus("Please wait...", False)
-            for (a, b) in self.coordsets:
-                self.gui.vmap.clear(a, self.lmap)
-            self.fullsearchflag = False
-            self.updateStatus("", False)
-        # resize and reposition
-        self.gui.resetPos()
-        self.gui.resetZoom()
+        if self.gotscript:
+            self.lmap = LogicalMap("../maps/" + self.cfg["MAP_FILE"])
+            self.gui.setLmap(self.lmap)
+            self.gui.vmap.drawMap(self.lmap)
+            self.cfg["MAPREF"] = self.lmap
+            self.cfg["GOAL"] = self.gc["ORIGIN"]
+            
+        else:
+            # clear map
+            self.gui.vmap.clear(self.path, self.lmap)
+            if self.fullsearchflag:
+                self.updateStatus("Redrawing map")
+                self.updateStatus("Please wait...", False)
+                for (a, b) in self.coordsets:
+                    self.gui.vmap.clear(a, self.lmap)
+                self.fullsearchflag = False
+                self.updateStatus("", False)
+            # resize and reposition
+            self.gui.resetPos()
+            self.gui.resetZoom()
         # reset vars
         self.resetVars()
         self.agent.reset(**self.cfg)
@@ -333,10 +375,14 @@ class SimController(object):
                   '{0:.5g}'.format(self.pathtime) + ";" + \
                   '{0:.5g}'.format(self.timeremaining))
         else:
-            message = "Total Cost : " + str(self.pathcost) + \
+            if isinstance((self.pathcost),int):
+                totalcost = str(self.pathcost)
+            else:
+                totalcost = '{0:.2f}'.format(self.pathcost)
+            message = "Total Cost : " + totalcost + \
                       " | Total Steps : " + str(self.pathsteps) + \
-                      " | Time Remaining : " + '{0:.5g}'.format(self.timeremaining) + \
-                      " | Total Time : " + '{0:.5g}'.format(self.pathtime)
+                      " | Time Remaining : " + '{0:.5f}'.format(self.timeremaining) + \
+                      " | Total Time : " + '{0:.5f}'.format(self.pathtime)
 
             self.updateStatus(message)
 
@@ -374,6 +420,8 @@ class SimController(object):
                 except TypeError:
                     nextstep = nextreturn
                 else:
+                    #something to draw
+                    #self.updateStatus("Drawing...", False)
                     nextstep, coordsets = nextreturn
                     for coordset in coordsets:
                         if coordset[1] == 'reset':
@@ -384,16 +432,21 @@ class SimController(object):
                     self.gui.setGoal(self.cfg["GOAL"])
                     self.fullsearchflag = True
                     self.coordsets = coordsets
+                    #self.updateStatus("Plotting path...", False)
                 finally:  # paint path
                     self.gui.vmap.drawSet(self.path, "blue")
                     self.gui.vmap.drawPoint(nextstep, "white")
                     self.current = nextstep
                     self.path.add(nextstep)
-                    message = str(nextstep) + " | Cost : " + str(self.pathcost) + \
+                    if isinstance((self.pathcost),int):
+                        currcost = str(self.pathcost)
+                    else:
+                        currcost = '{0:.2f}'.format(self.pathcost)
+                    message = str(nextstep) + " | Cost : " + currcost + \
                         " | Steps : " + str(self.pathsteps)
                     if self.cfg.get("DEADLINE"):
                         message += " | Time remaining: " + \
-                                   '{0:.5g}'.format(self.timeremaining)
+                                   '{0:.5f}'.format(self.timeremaining)
                     self.updateStatus(message)
                     sleep(self.cfg.get("SPEED"))  # delay, if any
                     
@@ -449,7 +502,10 @@ class SimController(object):
         else:
             self.cfg["GOAL"] = self.lmap.generateCoord()
         if self.gui is not None:
-            self.hdlReset("Goal moved to " + str(self.cfg["GOAL"]))
+            self.gui.clearGoal()
+            self.gui.setGoal(self.cfg["GOAL"])
+            self.updateStatus("Goal moved to " + str(self.cfg["GOAL"]))
+            #self.hdlReset("Goal moved to " + str(self.cfg["GOAL"]))
 
     def loadAgent(self, agentpath):
         """Menu handler: Search - Load Agent. Loads agent based on openfiledialog in
@@ -474,6 +530,7 @@ class SimController(object):
             print(traceback.format_exc())
         else:
             self.cfg["AGENT_FILE"] = agentfile
+
 
     def areWeThereYet(self):
         """Returns True/False."""
@@ -500,6 +557,18 @@ class SimController(object):
             if not self.cfg.get("AUTO"):
                 print(msg)
 
+    def loadScript(self):
+        try:
+            execfile('script.py', self.script)
+            self.gc = self.script.get("GOAL_CHANGE")
+            self.gc["ORIGIN"] = self.cfg["GOAL"]    #save in case of reset
+            self.tc = self.script.get("TERRAIN_CHANGE")
+            self.ac = self.script.get("AGENT_CHANGE")
+            self.gotscript = True
+            self.updateStatus("Loaded script")
+        except: #we don't care why it failed
+            self.updateStatus("Failed to load script.py")
+            
 
 if __name__ == '__main__':
     print("To run the P4 Simulator, type 'python p4.py' " + \

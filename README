@@ -53,10 +53,10 @@ If config_file or file path not supplied, looks for default config.py.
       -nodiag - default=True, disallows diagonal moves 
       -gui - default=False, displays gui
       -auto - default=False, suppresses info messages and outputs result in csv format
+      -dynamic - default=False, loads changes from script.py to occur during the search
 
 Run the GUI with a random agent:
 
-      
    # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui
 
 
@@ -92,7 +92,13 @@ Total Time: time taken (Total Time + Time Remaining = Deadline)
 In -auto mode, output is in csv format: cost;steps;time_taken;time_remaining e.g:
     187.13708499;154;0.32759;19.672
 
-
+INTERROGATE MODEL OUTSIDE SIMULATOR
+===================================
+In the src, directory, run the Python interpreter
+>>>import p4_model as m
+>>>l = m.LogicalMap("../maps/mixedcost3.map")   #or other existing map
+>>># now you can interrogate the model, e.g...
+>>>l.getCost((0,0))                         #note double brackets
 
 
 BATCH & PROFILING (UNIX)
