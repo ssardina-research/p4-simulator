@@ -26,8 +26,8 @@ GUI = True                  #True = show GUI, False = run on command line
 SPEED = 0.0                 #delay between displayed moves in seconds
 DEADLINE = 15               #Number of seconds to reach goal
 HEURISTIC = 'euclid'        #may be 'euclid' or 'manhattan'
-DIAGONAL = True             #True = allow diagonal path, False = disallow
+DIAGONAL = True             #Only allows 4-way movement when False (default = True)
 FREE_TIME = 0.000           #Steps greater than this are timed (if 0, all steps are timed)
 DYNAMIC = False             #Implements runtime changes found in script.py when True
-
+STRICT = True               #Allows traversal of impassable cells when False (default = True)
 

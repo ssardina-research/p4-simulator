@@ -50,10 +50,11 @@ If config_file or file path not supplied, looks for default config.py.
       SPEED is a time delay in seconds between moves, defaults to 0
       TIMER defaults to clock
       FREE_TIME seconds to consider a step "for free"
-      -nodiag - default=True, disallows diagonal moves 
-      -gui - default=False, displays gui
-      -auto - default=False, suppresses info messages and outputs result in csv format
-      -dynamic - default=False, loads changes from script.py to occur during the search
+      -nodiag - disallows diagonal moves 
+      -gui - displays gui
+      -auto - suppresses info messages and outputs result in csv format
+      -dynamic - loads changes from script.py to occur during the search
+      -nonstrict - permits traversal of impassable cells, albeit at infinite cost
 
 Run the GUI with a random agent:
 

@@ -326,12 +326,15 @@ class SimController(object):
                 #self.pathcost += self.lmap.getCost(current, previous, allkeys)
                 if not self.lmap.isAdjacent(current,previous):
                     cost = float('inf')
-                self.pathcost += cost
                 # agent has made illegal move:
                 if cost == float('inf'):
+                    if self.cfg["STRICT"]:
+                        current = previous
+                        self.pathsteps -= 1
+                        cost = 0                       
                     if not self.cfg.get("AUTO"):
-                        print("infinity at step " + str(self.pathsteps-1) + ", " + str(current) + ":" + str(self.lmap.getCost(current)))
-
+                        print("Illegal move at " + str(current) + ":" + str(self.lmap.getCost(current)))
+                self.pathcost += cost        
             yield nextreturn
 
     # BUTTON HANDLERS

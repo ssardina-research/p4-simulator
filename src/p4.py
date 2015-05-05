@@ -40,6 +40,8 @@ parser.add_argument('-f', action='store', dest='FREE_TIME', default=0, help="ste
 parser.add_argument('-auto', action='store_true', dest='AUTO', default=False, help="running automatically (default false)")
 parser.add_argument('-version', action='version', version='P4 Path Planning Simulator ' + VERSION)
 parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=False, help="make changes based on script.py (default false)")
+# Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
+parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 
 args = parser.parse_args()
 
