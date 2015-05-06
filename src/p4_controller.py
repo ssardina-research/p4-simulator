@@ -128,8 +128,6 @@ class SimController(object):
                 mappath = None
             # create logical map object
             self.lmap = LogicalMap(mappath)
-            # add mapref to cfg dictionary so all settings can be passed to Agent in one go
-            self.cfg["MAPREF"] = self.lmap
         except:
             raise p4.BadMapException()
             
@@ -344,7 +342,6 @@ class SimController(object):
             self.lmap = LogicalMap("../maps/" + self.cfg["MAP_FILE"])
             self.gui.setLmap(self.lmap)
             self.gui.vmap.drawMap(self.lmap)
-            self.cfg["MAPREF"] = self.lmap
             self.cfg["GOAL"] = self.gc["ORIGIN"]
             
         else:
@@ -474,7 +471,6 @@ class SimController(object):
             self.updateStatus("Unable to load map: " + mapfile)
             
         else:        
-            self.cfg["MAPREF"] = self.lmap
             self.processPrefs()
             # generate random start and goal coordinates
             x = y = None
@@ -508,7 +504,6 @@ class SimController(object):
             self.gui.clearGoal()
             self.gui.setGoal(self.cfg["GOAL"])
             self.updateStatus("Goal moved to " + str(self.cfg["GOAL"]))
-            #self.hdlReset("Goal moved to " + str(self.cfg["GOAL"]))
 
     def loadAgent(self, agentpath):
         """Menu handler: Search - Load Agent. Loads agent based on openfiledialog in
