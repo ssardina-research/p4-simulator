@@ -55,6 +55,7 @@ If config_file or file path not supplied, looks for default config.py.
       -auto - suppresses info messages and outputs result in csv format
       -dynamic - loads changes from script.py to occur during the search
       -nonstrict - permits traversal of impassable cells, albeit at infinite cost
+      -pre - permits preprocessing by call to agent.preprocess()
 
 Run the GUI with a random agent:
 

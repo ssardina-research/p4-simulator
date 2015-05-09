@@ -30,4 +30,5 @@ DIAGONAL = True             #Only allows 4-way movement when False (default = Tr
 FREE_TIME = 0.000           #Steps greater than this are timed (if 0, all steps are timed)
 DYNAMIC = False             #Implements runtime changes found in script.py when True
 STRICT = True               #Allows traversal of impassable cells when False (default = True)
+PREPROCESS = False          #Gives agent opportunity to preprocess map (default = False)
 

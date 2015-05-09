@@ -42,6 +42,7 @@ parser.add_argument('-version', action='version', version='P4 Path Planning Simu
 parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=False, help="make changes based on script.py (default false)")
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
+parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
 
 args = parser.parse_args()
 

@@ -16,6 +16,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 # 20/4/15: modified for dynamic changes
+# 9/5/15:  modified to support preprocessing
 
 import os
 import imp
@@ -23,6 +24,7 @@ import signal
 import ast
 import p4_utils as p4  # sets constants
 import importlib
+import traceback
 
 # NOTE: info output has been commented out - cannot output to CLI during
 # automated testing - expected return values are csv results only.
@@ -89,17 +91,15 @@ class SimController(object):
             self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
         else:
             try:
-                #self.cfg = args
                 self.setStart(ast.literal_eval(self.cfg.get("START")))
                 self.setGoal(ast.literal_eval(self.cfg.get("GOAL")))            
                 self.cfg["DEADLINE"] = float(self.cfg.get("DEADLINE"))
                 self.cfg["FREE_TIME"] = float(self.cfg.get("FREE_TIME"))
                 
+                self.initAgent()
                 self.processMap()       #imports map to model may return BadMap exception
                 self.processPrefs()     #passes heuristic and deadline preferences to model
                 self.resetVars()
-
-                self.initAgent()
                 
             except p4.BadAgentException:
                 print("Bad Agent. Irrecoverable error. Terminating...")
@@ -111,7 +111,6 @@ class SimController(object):
 
             except:
                 print("Irrecoverable error. Terminating...")
-                import traceback
                 print(traceback.format_exc())
                 raise SystemExit()
         
@@ -135,6 +134,18 @@ class SimController(object):
         # pass preferences to lmap
         self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
         self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
+        if self.cfg["PREPROCESS"]:
+            try:
+                self.agent.preprocess(self.lmap)
+            except AttributeError:
+                if self.cfg["AUTO"] is False:
+                    print("Agent doesn't support preprocessing.")
+            except:
+                #some other problem
+                if self.cfg["AUTO"] is False:
+                    print("Preprocessing failed.")
+                    print(traceback.format_exc())
+                
         
     def initAgent(self):
         # initialise agent - may throw BadAgentException
@@ -168,14 +179,13 @@ class SimController(object):
                     if a is not "__builtins__" and a is not "MAPREF":
                         print str(a) + ":" + str(b) + " ",
                 print "\n"
-            
+
+            self.initAgent()                
             self.processMap()
             self.processPrefs()
             self.setStart(self.cfg.get("START"))
             self.setGoal(self.cfg.get("GOAL"))
             
-            self.initAgent()
-
             if self.gui is not None:    #reset has been called from the gui
                 self.gui.setLmap(self.lmap)
                 if not oldmap == self.cfg.get("MAP_FILE"):
@@ -191,7 +201,6 @@ class SimController(object):
             self.updateStatus("Unable to load agent: " + self.cfg.get("AGENT_FILE"))
         except:
             # unexpected error
-            import traceback
             print(traceback.format_exc())
             self.updateStatus("Problem reading config file!")
             
@@ -245,7 +254,6 @@ class SimController(object):
                 else:
                     nextstep = self.gen.next()  # call with no SIGNAL
             except Timeout.Timeout:
-                #import traceback
                 self.timeremaining = 0
                 self.updateStatus("Timed Out!")
             except:
@@ -359,7 +367,7 @@ class SimController(object):
             self.gui.resetZoom()
         # reset vars
         self.resetVars()
-        self.agent.reset(**self.cfg)
+        self.agent.reset()
 
         self.gui.setStart(self.cfg["START"])
         self.gui.setGoal(self.cfg["GOAL"])
@@ -518,13 +526,12 @@ class SimController(object):
             agentmod = imp.load_source(agentfile, agentpath)
             # create Agent and pass in current config settings
             self.agent = agentmod.Agent()
-            self.agent.reset(**self.cfg)
+            self.agent.reset()
 
             self.updateStatus("Initialised " + agentfile)
             
         except:
             self.updateStatus("Unable to load " + agentfile)
-            import traceback
             print(traceback.format_exc())
         else:
             self.cfg["AGENT_FILE"] = agentfile
