@@ -133,5 +133,4 @@ jackagt.jar
 *.csv
 *.7z
 *.profileagent_astar.py
-src/agents/agent_astar.py
-src/agents/agent_jps.py
+src/agents/
