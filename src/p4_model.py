@@ -34,6 +34,8 @@ class LogicalMap(object):
         DEFAULT_HEIGHT = 512
         DEFAULT_WIDTH = 512
         self.uniform = True
+        
+        self.cellWithinBoundaries = self.isMapped   #for backward compatibility
 
         # Default method calls. If getH() is called, by default run euclid(), etc.
         self.getH = self._euclid
@@ -440,12 +442,11 @@ class LogicalMap(object):
                                 self.costs[abbrev] = self.info[terrain]
 
         except EnvironmentError:
-            print("::: Error Parsing Map File")
+            print("Error parsing map file")
             self.matrix = None
 
-    
-    def cellWithinBoundaries(self, node):
-        """ just checks if node is on map"""
+    def isMapped(self, node):
+        """ returns True if node is on map """
         return 0 <= node[0] < self.width and 0 <= node[1] < self.height
         
     def setPoints(self, terrain, pointlist):
