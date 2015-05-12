@@ -387,8 +387,8 @@ class LogicalMap(object):
         
     def _octile(self, current, goal):
         """Internal. Called as getH() if HEURISTIC set to 'octile'"""
-        xlen = current[0] - goal[0]
-        ylen = current[1] - goal[1]
+        xlen = fabs(current[0] - goal[0])
+        ylen = fabs(current[1] - goal[1])
         return max(xlen,ylen) + self.OCT_CONST * min(xlen,ylen)
 
     def _readMap(self, mappath):
