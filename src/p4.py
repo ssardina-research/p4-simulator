@@ -43,7 +43,7 @@ parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=Fal
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
-parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store', help="run scenario file SCENFILE in batch mode and collect results in csv file CSVFILE")
+parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store', help="run scenario in batch mode. Requires .scen file and .csv file for results")
 parser.add_argument
 args = parser.parse_args()
 
