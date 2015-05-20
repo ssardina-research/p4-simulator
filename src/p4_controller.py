@@ -581,32 +581,32 @@ class SimController(object):
             self.updateStatus("Failed to load script.py")
             
     def runBatch(self, infile, outfile):
-        #assumes MAP_FILE, AGENT_FILE, BATCH[0], BATCH[1] set in self.cfg
-        #initialise map and agent
-        print ("\nRunning batch")
+        # assumes MAP_FILE, AGENT_FILE, BATCH[0], BATCH[1] set in self.cfg
+        # initialise map and agent
+        print ("\nRunning batch...")
         self.processMap()
         self.initAgent()
-        #open scenario file and read into problems list
+        # open scenario file and read into problems list
         scenario = open(infile)
         problems = [line.strip().split() for line in scenario if len(line) > 20]
         scenario.close
-        #process each problem
-        #if outfile exists, open for append, else create new
-        f=open(outfile,"ab")    #reopen to append - csv has to be binary in Windows or adds extra line feeds      
+        # process each problem
+        # if outfile exists, open for append, else create new
+        f = open(outfile, "ab")  # reopen to append - csv has to be binary in Windows or adds extra line feeds      
         f.write("sep=;\nagent;map;start;goal;optimum;actual;steps;time_taken\n")
         count = 1
         for problem in problems:
-            print "\r", count,  #output number of problems completed
+            print "\r", count,  # output number of problems completed
             count += 1
             self.agent.reset()
-            skip,mappath,size1,size2,scol,srow,gcol,grow,optimum = problem
+            skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
             pathname, map = os.path.split(mappath)
-            self.cfg["START"] = (int(scol),int(srow))
-            self.cfg["GOAL"] = (int(gcol),int(grow))
+            self.cfg["START"] = (int(scol), int(srow))
+            self.cfg["GOAL"] = (int(gcol), int(grow))
             self.resetVars()
             output = self.search()
-            #append prob line to file + output
-            f.write(self.cfg["AGENT_FILE"]+";"+ map+";" +str(self.cfg["START"]) + ";" + str(self.cfg["GOAL"]) + ";" + optimum + ";" + output + "\n")   
+            # append prob line to file + output
+            f.write(self.cfg["AGENT_FILE"] + ";" + map + ";" + str(self.cfg["START"]) + ";" + str(self.cfg["GOAL"]) + ";" + optimum + ";" + output + "\n")   
         f.close()
             
 if __name__ == '__main__':

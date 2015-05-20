@@ -43,12 +43,14 @@ parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=Fal
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
-parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store')
-
+parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store', help="run scenario file SCENFILE in batch mode and collect results in csv file CSVFILE")
+parser.add_argument
 args = parser.parse_args()
 
+
+# If batch mode, then check scenario and agent files are supplied, extract map path from patth of scenario file
 if args.BATCH is not None:
-    #requires .scen and agent to run
+    # Requires .scen file and agent file to run
     if not os.path.isfile(args.BATCH[0]):
         print("Scenario file " + args.BATCH[0] + " not found. Terminating...")
         raise SystemExit
@@ -56,11 +58,15 @@ if args.BATCH is not None:
         print ("Agent file not supplied. Terminating...")
         raise SystemExit
     else:
+        # Extract path of map file from path of scenario (justt remove suffix .scen)
         args.AUTO = True
         fn = os.path.split(args.BATCH[0])[1]
         args.MAP_FILE = fn[:-5]
+        args.MAP_FILE = args.BATCH[0][:-5]
+        print("Map to be used for batch run: " + args.MAP_FILE)
+        print("Agent to be used for batch run: " + args.AGENT_FILE)
 
-#if map file named, assume using command line arguments, not config file
+# If map file named available (command line or batch mode), take it. Otherwise, use one in config file
 if args.MAP_FILE is not None:
     # If map file is named but does not exist, raise exception and terminate
     if not os.path.isfile('../maps/' + args.MAP_FILE):
