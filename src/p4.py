@@ -43,8 +43,22 @@ parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=Fal
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
+parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store')
 
 args = parser.parse_args()
+
+if args.BATCH is not None:
+    #requires .scen and agent to run
+    if not os.path.isfile(args.BATCH[0]):
+        print("Scenario file " + args.BATCH[0] + " not found. Terminating...")
+        raise SystemExit
+    elif args.AGENT_FILE is None:
+        print ("Agent file not supplied. Terminating...")
+        raise SystemExit
+    else:
+        args.AUTO = True
+        fn = os.path.split(args.BATCH[0])[1]
+        args.MAP_FILE = fn[:-5]
 
 #if map file named, assume using command line arguments, not config file
 if args.MAP_FILE is not None:

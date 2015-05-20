@@ -40,7 +40,8 @@ such as what map and search algorithm to use. See config.py for expected format.
 If config_file or file path not supplied, looks for default config.py.
 
  # python p4.py -m <MAP_FILE> -s <START> -g <GOAL> -a <AGENT_FILE> \
- 	[-d <DEADLINE> -f <FREE_TIME> -e <euclid|manhattan> -r <SPEED> -nodiag -gui -auto]
+ 	[-d <DEADLINE> -f <FREE_TIME> -e <euclid|manhattan> -r <SPEED> -nodiag -gui 
+    -auto -dynamic -nonstrict -pre]
    where:
       MAP_FILE is a file in movingai format, saved to the MAPS sister folder
       AGENT_FILE is a file with prescribed API, saved to the AGENTS subfolder
@@ -56,7 +57,16 @@ If config_file or file path not supplied, looks for default config.py.
       -dynamic - loads changes from script.py to occur during the search
       -nonstrict - permits traversal of impassable cells, albeit at infinite cost
       -pre - permits preprocessing by call to agent.preprocess()
+      -batch <SCEN_FILE> <OUT_FILE> - reads problems from the scen file and outputs
+        results to the OUT_FILE in csv format. <SCEN_FILE> MUST be named with the name 
+        of the mapfile plus the extension .scen e.g. AR0011SR.map.scen and MUST be in 
+        movingai scenario file format but can be located anywhere on the system if the 
+        path is supplied. The map file identified in the scen filename should be located 
+        in the MAPS folder as usual.
 
+Run a batch of scenarios:
+ # python p4.py -batch C:/p4Repo/scenarios/A40011SR.map.scen astar_batch.csv -a agent_astar
+      
 Run the GUI with a random agent:
 
    # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui

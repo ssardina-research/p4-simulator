@@ -89,6 +89,10 @@ class SimController(object):
         if cfgfile is not None:
             self.readConfig()
             self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+        elif self.cfg["BATCH"] is not None:
+            self.runBatch(self.cfg["BATCH"][0],self.cfg["BATCH"][1])
+            print("\nBatch process completed. Results written to "+ self.cfg["BATCH"][1]+".\n")
+            raise SystemExit()
         else:
             try:
                 self.setStart(ast.literal_eval(self.cfg.get("START")))
@@ -249,8 +253,7 @@ class SimController(object):
                 # Don't set signal for infinite time
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        # print "timeout: ", self.timeout
-                            nextstep = self.gen.next()
+                        nextstep = self.gen.next()
                 else:
                     nextstep = self.gen.next()  # call with no SIGNAL
             except Timeout.Timeout:
@@ -258,8 +261,10 @@ class SimController(object):
                 self.updateStatus("Timed Out!")
             except:
                 self.updateStatus("Agent returned " + str(nextstep))
+                print(traceback.format_exc())
+                raise SystemExit()
                 break
-        self.hdlStop()
+        return self.hdlStop()
 
     def stepGenerator(self, current, target):
         """
@@ -378,10 +383,11 @@ class SimController(object):
     def hdlStop(self):
         """Button handler. Displays totals."""
         if self.cfg.get("AUTO"):
-            print(str(self.pathcost) + ";" + \
+            message =(str(self.pathcost) + ";" + \
                   str(self.pathsteps) + ";" + \
                   '{0:.5g}'.format(self.pathtime) + ";" + \
                   '{0:.5g}'.format(self.timeremaining))
+            return message
         else:
             if isinstance((self.pathcost),int):
                 totalcost = str(self.pathcost)
@@ -392,7 +398,7 @@ class SimController(object):
                       " | Time Remaining : " + '{0:.5f}'.format(self.timeremaining) + \
                       " | Total Time : " + '{0:.5f}'.format(self.pathtime)
 
-            self.updateStatus(message)
+        self.updateStatus(message)
 
     def hdlStep(self):
         """Button handler. Performs one step for GUI Step or Search.
@@ -574,7 +580,35 @@ class SimController(object):
         except: #we don't care why it failed
             self.updateStatus("Failed to load script.py")
             
-
+    def runBatch(self, infile, outfile):
+        #assumes MAP_FILE, AGENT_FILE, BATCH[0], BATCH[1] set in self.cfg
+        #initialise map and agent
+        print ("\nRunning batch")
+        self.processMap()
+        self.initAgent()
+        #open scenario file and read into problems list
+        scenario = open(infile)
+        problems = [line.strip().split() for line in scenario if len(line) > 20]
+        scenario.close
+        #process each problem
+        #if outfile exists, open for append, else create new
+        f=open(outfile,"ab")    #reopen to append - csv has to be binary in Windows or adds extra line feeds      
+        f.write("sep=;\nagent;map;start;goal;optimum;actual;steps;time_taken\n")
+        count = 1
+        for problem in problems:
+            print "\r", count,  #output number of problems completed
+            count += 1
+            self.agent.reset()
+            skip,mappath,size1,size2,scol,srow,gcol,grow,optimum = problem
+            pathname, map = os.path.split(mappath)
+            self.cfg["START"] = (int(scol),int(srow))
+            self.cfg["GOAL"] = (int(gcol),int(grow))
+            self.resetVars()
+            output = self.search()
+            #append prob line to file + output
+            f.write(self.cfg["AGENT_FILE"]+";"+ map+";" +str(self.cfg["START"]) + ";" + str(self.cfg["GOAL"]) + ";" + optimum + ";" + output + "\n")   
+        f.close()
+            
 if __name__ == '__main__':
     print("To run the P4 Simulator, type 'python p4.py' " + \
           "at the command line and press <Enter>")
