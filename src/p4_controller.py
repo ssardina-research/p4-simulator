@@ -594,7 +594,7 @@ class SimController(object):
 
         # Open csv file and processs each problem and dump results in csv file
         with open(outfile, 'wb') as csvfile:
-            fcsv = csv.writer(csvfile, delimiter=';',
+            fcsv = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
             fcsv.writerow(['agent', 'map', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps', 'time_taken'])
 
@@ -609,7 +609,8 @@ class SimController(object):
                 self.cfg["GOAL"] = (int(gcol), int(grow))
                 self.resetVars()
                 output = self.search()
-                fcsv.writerow([self.cfg["AGENT_FILE"], map, str(scol), srow, gcol, grow, optimum, output])   
+                actual_cost, steps, time, inf = str.split(output, ';')
+                fcsv.writerow([self.cfg["AGENT_FILE"], map, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time])   
 
             
 if __name__ == '__main__':
