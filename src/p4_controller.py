@@ -25,6 +25,7 @@ import ast
 import p4_utils as p4  # sets constants
 import importlib
 import traceback
+import csv
 
 # NOTE: info output has been commented out - cannot output to CLI during
 # automated testing - expected return values are csv results only.
@@ -590,24 +591,26 @@ class SimController(object):
         scenario = open(infile)
         problems = [line.strip().split() for line in scenario if len(line) > 20]
         scenario.close
-        # process each problem
-        # if outfile exists, open for append, else create new
-        f = open(outfile, "ab")  # reopen to append - csv has to be binary in Windows or adds extra line feeds      
-        f.write("sep=;\nagent;map;start;goal;optimum;actual;steps;time_taken\n")
-        count = 1
-        for problem in problems:
-            print "\r", count,  # output number of problems completed
-            count += 1
-            self.agent.reset()
-            skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
-            pathname, map = os.path.split(mappath)
-            self.cfg["START"] = (int(scol), int(srow))
-            self.cfg["GOAL"] = (int(gcol), int(grow))
-            self.resetVars()
-            output = self.search()
-            # append prob line to file + output
-            f.write(self.cfg["AGENT_FILE"] + ";" + map + ";" + str(self.cfg["START"]) + ";" + str(self.cfg["GOAL"]) + ";" + optimum + ";" + output + "\n")   
-        f.close()
+
+        # Open csv file and processs each problem and dump results in csv file
+        with open(outfile, 'wb') as csvfile:
+            fcsv = csv.writer(csvfile, delimiter=';',
+                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            fcsv.writerow(['agent', 'map', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps', 'time_taken'])
+
+            count = 1
+            for problem in problems:
+                print "\r", count,  # output number of problems completed
+                count += 1
+                self.agent.reset()
+                skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
+                pathname, map = os.path.split(mappath)
+                self.cfg["START"] = (int(scol), int(srow))
+                self.cfg["GOAL"] = (int(gcol), int(grow))
+                self.resetVars()
+                output = self.search()
+                fcsv.writerow([self.cfg["AGENT_FILE"], map, str(scol), srow, gcol, grow, optimum, output])   
+
             
 if __name__ == '__main__':
     print("To run the P4 Simulator, type 'python p4.py' " + \
