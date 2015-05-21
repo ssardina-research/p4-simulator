@@ -43,7 +43,8 @@ If config_file or file path not supplied, looks for default config.py.
  	[-d <DEADLINE> -f <FREE_TIME> -e <euclid|manhattan> -r <SPEED> -nodiag -gui 
     -auto -dynamic -nonstrict -pre]
    where:
-      MAP_FILE is a file in movingai format, saved to the MAPS sister folder
+      MAP_FILE is a file in movingai format
+      	if MAP_FILE is just a file name, it is assumed to be in ../maps/ sister folder
       AGENT_FILE is a file with prescribed API, saved to the AGENTS subfolder
       START is a tuple with start location in (col,row) format
       GOAL is a tuple with goal location in (col,row) format
@@ -58,18 +59,20 @@ If config_file or file path not supplied, looks for default config.py.
       -nonstrict - permits traversal of impassable cells, albeit at infinite cost
       -pre - permits preprocessing by call to agent.preprocess()
       -batch <SCEN_FILE> <OUT_FILE> - reads problems from the scen file and outputs
-        results to the OUT_FILE in csv format. <SCEN_FILE> MUST be named with the name 
-        of the mapfile plus the extension .scen e.g. AR0011SR.map.scen and MUST be in 
-        movingai scenario file format but can be located anywhere on the system if the 
-        path is supplied. The map file identified in the scen filename should be located 
-        in the MAPS folder as usual.
+        results to the OUT_FILE in csv format.
+        The <SCEN_FILE> MUST be in movingai scenario file format.  
+        The map to be used must be in the same directory as the <SCEN_FILE> and its 
+        name is the same but without the .scen extension. For example, if the <SCEN_FILE> 
+        is ../maps/bgmaps/AR0011SR.map.scen, then the map to be used will be file 
+        ../maps/bgmaps/AR0011SR.map. The map names inside the .scen file will be ignored. 
 
-Run a batch of scenarios:
- # python p4.py -batch C:/p4Repo/scenarios/A40011SR.map.scen astar_batch.csv -a agent_astar
+Run a BATCH of scenarios described in AR0011SR.map.scen scenario file:
+
+	# python p4.py -batch ../maps/bgmaps/AR0011SR.map.scen astar_batch.csv -a agent_astar
       
 Run the GUI with a random agent:
 
-   # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui
+	# python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui
 
 
 An example of a command line call is (run this from inside src/)

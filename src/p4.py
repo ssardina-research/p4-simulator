@@ -69,8 +69,15 @@ if args.BATCH is not None:
 # If map file named available (command line or batch mode), take it. Otherwise, use one in config file
 if args.MAP_FILE is not None:
     # If map file is named but does not exist, raise exception and terminate
-    if not os.path.isfile('../maps/' + args.MAP_FILE):
-        print(args.MAP_FILE + " not found. Terminating ... ")
+    dirname = os.path.dirname(args.MAP_FILE)
+    basename = os.path.basename(args.MAP_FILE)
+    if not dirname:
+            # if no directory is specified, assume ../maps/
+            dirname = '../maps/'
+    else:
+            dirname = dirname + '/'
+    if not os.path.isfile(dirname + basename):
+        print(dirname + basename + " not found. Terminating ... ")
         raise SystemExit
         
     CFG_FILE = None
