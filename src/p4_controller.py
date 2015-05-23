@@ -25,6 +25,7 @@ import ast
 import p4_utils as p4  # sets constants
 import importlib
 import traceback
+import csv
 
 # NOTE: info output has been commented out - cannot output to CLI during
 # automated testing - expected return values are csv results only.
@@ -89,6 +90,15 @@ class SimController(object):
         if cfgfile is not None:
             self.readConfig()
             self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+        elif self.cfg["BATCH"] is not None:
+            try:
+                self.runBatch(*self.cfg["BATCH"])
+                print("\nBatch process completed. Results written to "+ self.cfg["BATCH"][1]+".\n")
+            except Exception as e:
+                print("\nAn error has occurred. Batch results may be incomplete.")
+                print e
+            finally:
+                raise SystemExit()
         else:
             try:
                 self.setStart(ast.literal_eval(self.cfg.get("START")))
@@ -249,8 +259,7 @@ class SimController(object):
                 # Don't set signal for infinite time
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        # print "timeout: ", self.timeout
-                            nextstep = self.gen.next()
+                        nextstep = self.gen.next()
                 else:
                     nextstep = self.gen.next()  # call with no SIGNAL
             except Timeout.Timeout:
@@ -258,8 +267,10 @@ class SimController(object):
                 self.updateStatus("Timed Out!")
             except:
                 self.updateStatus("Agent returned " + str(nextstep))
+                print(traceback.format_exc())
+                raise SystemExit()
                 break
-        self.hdlStop()
+        return self.hdlStop()
 
     def stepGenerator(self, current, target):
         """
@@ -377,22 +388,24 @@ class SimController(object):
 
     def hdlStop(self):
         """Button handler. Displays totals."""
-        if self.cfg.get("AUTO"):
-            print(str(self.pathcost) + ";" + \
-                  str(self.pathsteps) + ";" + \
-                  '{0:.5g}'.format(self.pathtime) + ";" + \
-                  '{0:.5g}'.format(self.timeremaining))
+        if isinstance((self.pathcost),int):
+            totalcost = str(self.pathcost)
         else:
-            if isinstance((self.pathcost),int):
-                totalcost = str(self.pathcost)
-            else:
-                totalcost = '{0:.2f}'.format(self.pathcost)
+            totalcost = '{0:.2f}'.format(self.pathcost)
+        if self.cfg.get("AUTO"):
+            message =(totalcost + ";" + \
+                str(self.pathsteps) + ";" + \
+                str(self.pathtime) + ";" + str(self.timeremaining))
+            
+            return message
+
+        else:
             message = "Total Cost : " + totalcost + \
                       " | Total Steps : " + str(self.pathsteps) + \
-                      " | Time Remaining : " + '{0:.5f}'.format(self.timeremaining) + \
-                      " | Total Time : " + '{0:.5f}'.format(self.pathtime)
+                      " | Time Remaining : " + str(self.timeremaining) + \
+                      " | Total Time : " + str(self.pathtime)
 
-            self.updateStatus(message)
+        self.updateStatus(message)
 
     def hdlStep(self):
         """Button handler. Performs one step for GUI Step or Search.
@@ -454,7 +467,7 @@ class SimController(object):
                         " | Steps : " + str(self.pathsteps)
                     if self.cfg.get("DEADLINE"):
                         message += " | Time remaining: " + \
-                                   '{0:.5f}'.format(self.timeremaining)
+                            str(self.timeremaining)
                     self.updateStatus(message)
                     sleep(self.cfg.get("SPEED"))  # delay, if any
                     
@@ -574,7 +587,55 @@ class SimController(object):
         except: #we don't care why it failed
             self.updateStatus("Failed to load script.py")
             
+    def runBatch(self, infile, outfile, reps = 1):
+        # assumes MAP_FILE, AGENT_FILE set in self.cfg
+        # initialise map and agent
+        print ("\nRunning batch...")
+        times = []
+        reps = int(reps)
+        self.processMap()
+        self.initAgent()
+        self.processPrefs() 
+        # open scenario file and read into problems list
+        scenario = open(infile)
+        problems = [line.strip().split() for line in scenario if len(line) > 20]
+        scenario.close
 
+        # If csv file doesn't exist, create and write header, then close
+        if not os.path.isfile(outfile):
+            with open(outfile, 'wb') as csvfile:
+                fcsv = csv.writer(csvfile, delimiter=',',
+                                        quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                fcsv.writerow(['agent', 'map', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps', 'time_taken', 'quality'])
+        # Open existing csv file, process each problem and append results     
+        with open(outfile, 'ab') as csvfile:
+            fcsv = csv.writer(csvfile, delimiter=',',
+                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            count = 1
+            for problem in problems:
+                print "\r", count,  # output number of problems completed
+                count += 1
+                skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
+                pathname, map = os.path.split(mappath)
+                self.cfg["START"] = (int(scol), int(srow))
+                self.cfg["GOAL"] = (int(gcol), int(grow))
+                
+                for i in xrange(reps):
+                    self.agent.reset()
+                    self.resetVars()
+                    output = self.search()
+                    actual_cost, steps, time, inf = str.split(output, ';')
+                    times.append(float(time))
+                    
+                time = sum(times)/reps    # calculate average
+                
+                try:
+                    quality = float(optimum)/float(actual_cost)
+                except ZeroDivisionError:
+                    quality = 0
+                fcsv.writerow([self.cfg["AGENT_FILE"], map, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time, quality])   
+
+            
 if __name__ == '__main__':
     print("To run the P4 Simulator, type 'python p4.py' " + \
           "at the command line and press <Enter>")

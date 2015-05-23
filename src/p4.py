@@ -43,14 +43,44 @@ parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=Fal
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
-
+parser.add_argument('-batch', nargs='*', dest='BATCH', action ='store', help="run scenario in batch mode. Requires .scen file and .csv file for results. Optionally takes integer as 3rd argument for number of repetitions across which test times are to be averaged.")
+parser.add_argument
 args = parser.parse_args()
 
-#if map file named, assume using command line arguments, not config file
+
+# If batch mode, then check scenario and agent files are supplied, extract map path from path of scenario file
+if args.BATCH is not None:
+    # Requires .scen file and agent file to run
+    if not len(args.BATCH) >= 2:
+        print("-batch takes minimum of 2 arguments. Terminating...")
+        raise SystemExit
+    elif not os.path.isfile(args.BATCH[0]):
+        print("Scenario file " + args.BATCH[0] + " not found. Terminating...")
+        raise SystemExit
+    elif args.AGENT_FILE is None:
+        print ("Agent file not supplied. Terminating...")
+        raise SystemExit
+    else:
+        # Extract path of map file from path of scenario (justt remove suffix .scen)
+        args.AUTO = True
+        fn = os.path.split(args.BATCH[0])[1]
+        args.MAP_FILE = fn[:-5]
+        args.MAP_FILE = args.BATCH[0][:-5]
+        print("Map to be used for batch run: " + args.MAP_FILE)
+        print("Agent to be used for batch run: " + args.AGENT_FILE)
+
+# If map file named available (command line or batch mode), take it. Otherwise, use one in config file
 if args.MAP_FILE is not None:
     # If map file is named but does not exist, raise exception and terminate
-    if not os.path.isfile('../maps/' + args.MAP_FILE):
-        print(args.MAP_FILE + " not found. Terminating ... ")
+    dirname = os.path.dirname(args.MAP_FILE)
+    basename = os.path.basename(args.MAP_FILE)
+    if not dirname:
+            # if no directory is specified, assume ../maps/
+            dirname = '../maps/'
+    else:
+            dirname = dirname + '/'
+    if not os.path.isfile(dirname + basename):
+        print(dirname + basename + " not found. Terminating ... ")
         raise SystemExit
         
     CFG_FILE = None
