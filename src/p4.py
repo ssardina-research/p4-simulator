@@ -43,15 +43,18 @@ parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=Fal
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
-parser.add_argument('-batch', nargs=2, dest='BATCH', action ='store', help="run scenario in batch mode. Requires .scen file and .csv file for results")
+parser.add_argument('-batch', nargs='*', dest='BATCH', action ='store', help="run scenario in batch mode. Requires .scen file and .csv file for results. Optionally takes integer as 3rd argument for number of repetitions across which test times are to be averaged.")
 parser.add_argument
 args = parser.parse_args()
 
 
-# If batch mode, then check scenario and agent files are supplied, extract map path from patth of scenario file
+# If batch mode, then check scenario and agent files are supplied, extract map path from path of scenario file
 if args.BATCH is not None:
     # Requires .scen file and agent file to run
-    if not os.path.isfile(args.BATCH[0]):
+    if not len(args.BATCH) >= 2:
+        print("-batch takes minimum of 2 arguments. Terminating...")
+        raise SystemExit
+    elif not os.path.isfile(args.BATCH[0]):
         print("Scenario file " + args.BATCH[0] + " not found. Terminating...")
         raise SystemExit
     elif args.AGENT_FILE is None:

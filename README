@@ -58,8 +58,9 @@ If config_file or file path not supplied, looks for default config.py.
       -dynamic - loads changes from script.py to occur during the search
       -nonstrict - permits traversal of impassable cells, albeit at infinite cost
       -pre - permits preprocessing by call to agent.preprocess()
-      -batch <SCEN_FILE> <OUT_FILE> - reads problems from the scen file and outputs
-        results to the OUT_FILE in csv format.
+      -batch <SCEN_FILE> <OUT_FILE> [reps] - reads problems from the scen file and outputs
+        results to the OUT_FILE in csv format. Optionally takes integer in reps to specify
+        number of repetitions across which test times are to be averaged.
         The <SCEN_FILE> MUST be in movingai scenario file format.  
         The map to be used must be in the same directory as the <SCEN_FILE> and its 
         name is the same but without the .scen extension. For example, if the <SCEN_FILE> 
@@ -68,7 +69,7 @@ If config_file or file path not supplied, looks for default config.py.
 
 Run a BATCH of scenarios described in AR0011SR.map.scen scenario file:
 
-	# python p4.py -batch ../maps/bgmaps/AR0011SR.map.scen astar_batch.csv -a agent_astar
+	# python p4.py -batch ../maps/bgmaps/AR0011SR.map.scen astar_batch.csv 3 -a agent_astar
       
 Run the GUI with a random agent:
 
