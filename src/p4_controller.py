@@ -345,12 +345,12 @@ class SimController(object):
                     cost = float('inf')
                 # agent has made illegal move:
                 if cost == float('inf'):
+                    self.updateStatus("Illegal move at " + str(current) + ":" + str(self.lmap.getCost(current)),False)
                     if self.cfg["STRICT"]:
                         current = previous
+                        nextreturn = previous
                         self.pathsteps -= 1
                         cost = 0                       
-                    if not self.cfg.get("AUTO"):
-                        print("Illegal move at " + str(current) + ":" + str(self.lmap.getCost(current)))
                 self.pathcost += cost        
             yield nextreturn
 
