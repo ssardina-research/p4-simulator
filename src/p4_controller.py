@@ -103,8 +103,6 @@ class SimController(object):
             try:
                 self.setStart(ast.literal_eval(self.cfg.get("START")))
                 self.setGoal(ast.literal_eval(self.cfg.get("GOAL")))            
-                self.cfg["DEADLINE"] = float(self.cfg.get("DEADLINE"))
-                self.cfg["FREE_TIME"] = float(self.cfg.get("FREE_TIME"))
                 
                 self.initAgent()
                 self.processMap()       #imports map to model may return BadMap exception
@@ -130,7 +128,7 @@ class SimController(object):
             self.search()
             
     def processMap(self):
-        #may throw BadMapException
+        # may throw BadMapException
         try:
             mappath = os.path.join("..", "maps", self.cfg["MAP_FILE"])
             if not os.path.exists(mappath):
@@ -141,6 +139,8 @@ class SimController(object):
             raise p4.BadMapException()
             
     def processPrefs(self):
+        self.cfg["DEADLINE"] = float(self.cfg.get("DEADLINE"))
+        self.cfg["FREE_TIME"] = float(self.cfg.get("FREE_TIME"))
         # pass preferences to lmap
         self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
         self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
@@ -151,7 +151,7 @@ class SimController(object):
                 if self.cfg["AUTO"] is False:
                     print("Agent doesn't support preprocessing.")
             except:
-                #some other problem
+                # some other problem
                 if self.cfg["AUTO"] is False:
                     print("Preprocessing failed.")
                     print(traceback.format_exc())
@@ -196,11 +196,11 @@ class SimController(object):
             self.setStart(self.cfg.get("START"))
             self.setGoal(self.cfg.get("GOAL"))
             
-            if self.gui is not None:    #reset has been called from the gui
+            if self.gui is not None:    # reset has been called from the gui
                 self.gui.setLmap(self.lmap)
                 if not oldmap == self.cfg.get("MAP_FILE"):
                     self.gui.vmap.drawMap(self.lmap)
-                self.hdlReset()  #includes resetVars
+                self.hdlReset()  # includes resetVars
             else:
                 self.resetVars()  # no attempt to update GUI
             
@@ -309,7 +309,7 @@ class SimController(object):
                 if self.pathsteps in self.ac:
                     newpos = p4.addVectors(current,self.ac.get(self.pathsteps))
                     current = self.lmap.nearestPassable(newpos)
-                    yield newpos    #scripted move is not costed or counted
+                    yield newpos    # scripted move is not costed or counted
             try:
                 clockstart = timer()  # start timer
                 nextreturn = self.agent.getNext(self.lmap, current, target, self.timeremaining)
@@ -317,7 +317,7 @@ class SimController(object):
             except:
                 raise p4.BadAgentException()
                
-            #If the step involved no reasoning (took less than FREE_TIME) do not count its time
+            # If the step involved no reasoning (took less than FREE_TIME) do not count its time
             if ((clockend - clockstart) < self.cfg.get("FREE_TIME")):
                 steptime = 0
             else:
@@ -513,7 +513,11 @@ class SimController(object):
         else:
             self.cfg["START"] = self.lmap.generateCoord()
         if self.gui is not None:
-            self.hdlReset("Start moved to " + str(self.cfg["START"]))
+            self.gui.clearStart()
+            self.gui.setStart(self.cfg["START"])
+            self.updateStatus("Start moved to " + str(self.cfg["START"]))
+            #TODO if search not in progress, reset generator.
+            #self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
 
     def setGoal(self, goal=None):
         """Menu handler: Search - Reset Goal"""

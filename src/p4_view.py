@@ -197,6 +197,9 @@ class Gui(Tkinter.Tk):
     def clearGoal(self):
         self.vmap.clearCross(self.goal, self.lmap)
         
+    def clearStart(self):
+        self.vmap.clearCross(self.start, self.lmap)
+        
     def resetGoal(self):
         """Menu listener. Clears cross from old pos and calls SimController to reset """
         self.clearGoal()
