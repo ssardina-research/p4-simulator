@@ -613,9 +613,9 @@ class SimController(object):
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
             count = 0
             for problem in problems:
-                print "\r", count,  # output number of problems completed
                 count += 1
                 skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
+                print("========> Running problem {}: from ({},{}) to ({},{}) - Optimal: {}".format(count,scol,srow,gcol,grow, optimum))  # output number of problems completed
                 pathname, map = os.path.split(mappath)
                 self.cfg["START"] = (int(scol), int(srow))
                 self.cfg["GOAL"] = (int(gcol), int(grow))
