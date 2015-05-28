@@ -388,12 +388,12 @@ class SimController(object):
 
     def hdlStop(self):
         """Button handler. Displays totals."""
-        if isinstance((self.pathcost),int):
+        if isinstance((self.pathcost), int):
             totalcost = str(self.pathcost)
         else:
-            totalcost = '{0:.2f}'.format(self.pathcost)
+            totalcost = '{0:.4f}'.format(self.pathcost)
         if self.cfg.get("AUTO"):
-            message =(totalcost + ";" + \
+            message = (totalcost + ";" + \
                 str(self.pathsteps) + ";" + \
                 str(self.pathtime) + ";" + str(self.timeremaining))
             
