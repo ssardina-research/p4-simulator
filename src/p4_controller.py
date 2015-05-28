@@ -606,7 +606,7 @@ class SimController(object):
             with open(outfile, 'wb') as csvfile:
                 fcsv = csv.writer(csvfile, delimiter=',',
                                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                fcsv.writerow(['agent', 'map', 'no', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps', 'time_taken', 'quality'])
+                fcsv.writerow(['agent', 'no', 'map', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps', 'time_taken', 'quality'])
         # Open existing csv file, process each problem and append results     
         with open(outfile, 'ab') as csvfile:
             fcsv = csv.writer(csvfile, delimiter=',',
@@ -620,6 +620,7 @@ class SimController(object):
                 self.cfg["START"] = (int(scol), int(srow))
                 self.cfg["GOAL"] = (int(gcol), int(grow))
                 
+                times = []
                 for i in xrange(reps):
                     self.agent.reset()
                     self.resetVars()
@@ -633,7 +634,7 @@ class SimController(object):
                     quality = float(optimum)/float(actual_cost)
                 except ZeroDivisionError:
                     quality = 0
-                fcsv.writerow([self.cfg["AGENT_FILE"], map, count, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time, quality])   
+                fcsv.writerow([self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time, quality])   
 
             
 if __name__ == '__main__':
