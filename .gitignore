@@ -134,3 +134,4 @@ jackagt.jar
 *.7z
 *.profileagent_astar.py
 src/agents/
+src/run-student.sh
