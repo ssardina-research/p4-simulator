@@ -19,6 +19,7 @@
 
 import argparse, os, textwrap
 import p4_controller
+import re
 
 # Version of P4
 VERSION = "2.1"
@@ -64,8 +65,13 @@ if args.BATCH is not None:
         # Extract path of map file from path of scenario (justt remove suffix .scen)
         args.AUTO = True
         fn = os.path.split(args.BATCH[0])[1]
-        args.MAP_FILE = fn[:-5]
-        args.MAP_FILE = args.BATCH[0][:-5]
+#         args.MAP_FILE = args.BATCH[0][:-5]
+        # extract map pathname: everything up to .map included
+        try:
+            args.MAP_FILE = re.match(r'(.*\.map).*', args.BATCH[0]).group(1)
+        except AttributeError:
+            args.MAP_FILE = ''
+        print(args.MAP_FILE)
         print("Map to be used for batch run: " + args.MAP_FILE)
         print("Agent to be used for batch run: " + args.AGENT_FILE)
 
