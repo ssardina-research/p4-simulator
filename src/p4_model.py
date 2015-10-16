@@ -190,27 +190,29 @@ class LogicalMap(object):
 
         # get the terrain type for coord
         coord_type = self.getCell(coord)
-        previous_type = self.getCell(previous)
-        
-        isDiagonalMove = bool(previous and self.isDiag(previous, coord))
-        
-        if isDiagonalMove:
-            # diagonal move - need to check corner cutting
-            coord_x, coord_y = coord
-            previous_x, previous_y = previous
-            dX = previous_x - coord_x
-            dY = previous_y - coord_y
-
-            # check corner cutting
-            if self.isPassable((coord_x, coord_y + dY), keys=keys) and self.isPassable((coord_x + dX, coord_y), keys=keys):
-                #TODO (ssardina): all this calculation could be pre-computed into a type-cost matrix which pre-calculates the actual
-                #                 cost of moving from previous_type to coord_type. 
-                #                 The matrix would be pre-computed when the map is loaded
-                #                 this may or may not speed up the search, we need to try
-                return self.SQRT05*(self.costs[previous_type] + self.costs[coord_type])     
-                #return self.costs[coord_type] # old version - only considers cost of each cell navigated
+ 
+        if previous:
+            previous_type = self.getCell(previous)
+            isDiagonalMove = self.isDiag(previous, coord)
+            if isDiagonalMove:
+                # diagonal move - need to check corner cutting
+                coord_x, coord_y = coord
+                previous_x, previous_y = previous
+                dX = previous_x - coord_x
+                dY = previous_y - coord_y
+    
+                # check corner cutting
+                if self.isPassable((coord_x, coord_y + dY), keys=keys) and self.isPassable((coord_x + dX, coord_y), keys=keys):
+                    #TODO (ssardina): all this calculation could be pre-computed into a type-cost matrix which pre-calculates the actual
+                    #                 cost of moving from previous_type to coord_type. 
+                    #                 The matrix would be pre-computed when the map is loaded
+                    #                 this may or may not speed up the search, we need to try
+                    return self.SQRT05*(self.costs[previous_type] + self.costs[coord_type])     
+                    #return self.costs[coord_type] # old version - only considers cost of each cell navigated
+                else:
+                    return float('inf')
             else:
-                return float('inf')
+                return 0.5*(self.costs[previous_type] + self.costs[coord_type])
         else:
             return self.costs[coord_type]
 
