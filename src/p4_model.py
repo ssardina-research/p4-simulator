@@ -49,7 +49,7 @@ class LogicalMap(object):
         self.costs = {".": "ground", "G": "ground", "0": float('inf'),
                       "@": float('inf'), "S": "swamp", "T": "tree", "W": "water"}
                       
-        # matrix to hold precalculated costs for straight and diagonal moves between terrain types
+        # dictionary to hold precalculated costs for straight and diagonal moves between terrain types
         self.mixedmatrix = {}
         
         self.neighbourDic = {}
@@ -206,16 +206,11 @@ class LogicalMap(object):
     
                 # check corner cutting
                 if self.isPassable((coord_x, coord_y + dY), keys=keys) and self.isPassable((coord_x + dX, coord_y), keys=keys):
-                    #TODO (ssardina): all this calculation could be pre-computed into a type-cost matrix which pre-calculates the actual
-                    #                 cost of moving from previous_type to coord_type. 
-                    #                 The matrix would be pre-computed when the map is loaded
-                    #                 this may or may not speed up the search, we need to try
-                    return self.SQRT05*(self.costs[previous_type] + self.costs[coord_type])     
-                    #return self.costs[coord_type] # old version - only considers cost of each cell navigated
+                    return self.getMixedCost(previous_type, coord_type, True)
                 else:
                     return float('inf')
             else:
-                return 0.5*(self.costs[previous_type] + self.costs[coord_type])
+                return self.getMixedCost(previous_type, coord_type)
         else:
             return self.costs[coord_type]
 
@@ -400,9 +395,9 @@ class LogicalMap(object):
         ylen = fabs(current[1] - goal[1])
         return max(xlen,ylen) + self.OCT_CONST * min(xlen,ylen)
 
-    def _getMixedCost(self, terrain1, terrain2, diag = False):
+    def getMixedCost(self, terrain1, terrain2, diag = False):
         """
-        Internal. Returns cost from mixedmatrix based on terrain types passed in.
+        Returns cost from mixedmatrix based on terrain types passed in.
         Default returns cost of straight move. For diagonal move, set diag to True.
         If terrain doesn't exist, returns None.
         :type terrain1: str
