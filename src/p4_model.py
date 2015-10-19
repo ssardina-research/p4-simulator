@@ -48,7 +48,10 @@ class LogicalMap(object):
         # terrain types in costs dict will be replaced by values from map header
         self.costs = {".": "ground", "G": "ground", "0": float('inf'),
                       "@": float('inf'), "S": "swamp", "T": "tree", "W": "water"}
-
+                      
+        # matrix to hold precalculated costs for straight and diagonal moves between terrain types
+        self.mixedmatrix = {}
+        
         self.neighbourDic = {}
 
         # Each key is store in the map as (key_location) : [ d1, d2, ... ] where d1, d2, ... are the location of
@@ -397,6 +400,18 @@ class LogicalMap(object):
         ylen = fabs(current[1] - goal[1])
         return max(xlen,ylen) + self.OCT_CONST * min(xlen,ylen)
 
+    def _getMixedCost(self, terrain1, terrain2, diag = False):
+        """
+        Internal. Returns cost from mixedmatrix based on terrain types passed in.
+        Default returns cost of straight move. For diagonal move, set diag to True.
+        If terrain doesn't exist, returns None.
+        :type terrain1: str
+        :type terrain2: str
+        :type diag: bool
+        :rtype: float
+        """
+        return self.mixedmatrix.get((terrain1, terrain2, diag))
+        
     def _readMap(self, mappath):
         """
         Internal. Generates matrix. Initialises info and populates costs.
@@ -446,6 +461,13 @@ class LogicalMap(object):
                         for abbrev in self.costs:
                             if terrain == self.costs[abbrev]:
                                 self.costs[abbrev] = self.info[terrain]
+            # build mixedmatrix
+            for x in self.costs:
+                for y in self.costs:
+                    # diagonal moves
+                    self.mixedmatrix[x,y,True] = (self.costs[x] + self.costs[y]) * sqrt(.5)
+                    # straight moves
+                    self.mixedmatrix[x,y,False] = (self.costs[x] + self.costs[y]) / 2.0
 
         except EnvironmentError:
             print("Error parsing map file")
