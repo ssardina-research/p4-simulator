@@ -161,7 +161,17 @@ class SimController(object):
     def initAgent(self):
         # initialise agent - may throw BadAgentException
         try:
-            agentfile = "agents/" + self.cfg.get("AGENT_FILE")
+            dirname_agent = os.path.dirname(self.cfg.get("AGENT_FILE"))
+            basename_agent = os.path.basename(self.cfg.get("AGENT_FILE"))
+    
+            if not dirname_agent:
+                # if no directory is specified, assume ../maps/
+                dirname_agent = 'agents/'
+            else:
+                dirname_agent = dirname_agent + '/'
+            
+            agentfile = dirname_agent + basename_agent
+            print(agentfile)
             self.loadAgent(agentfile)
         except:
             raise p4.BadAgentException()
