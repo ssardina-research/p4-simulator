@@ -144,6 +144,7 @@ class SimController(object):
         # pass preferences to lmap
         self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
         self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
+        self.lmap.setCostModel(self.cfg.get("COST_MODEL"))
         if self.cfg["PREPROCESS"]:
             try:
                 self.agent.preprocess(self.lmap)

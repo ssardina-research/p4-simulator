@@ -114,6 +114,20 @@ class LogicalMap(object):
             self.getH = self._octile
         else:
             self.getH = self._manhattan
+            
+    def setCostModel(self, cm="mixed"):
+        """Sets straight and diagonal multipliers based on whichever cost model is in use."""
+        if cm=="mixed":
+            self.straightmulti = 1
+            self.diagmulti = self.SQRT2
+        elif cm =="mixed_opt1":
+            self.straightmulti = 1
+            self.diagmulti = 1.5
+        elif cm == "mixed_opt2":
+            self.straightmulti = 2
+            self.diagmulti = 3
+        else:
+            self.getCost = self._getRealCost      
 
     def setDiagonal(self, d):
         """Explicitly set methods to be used when getAdjacents() or isAdjacent() called."""
@@ -178,15 +192,39 @@ class LogicalMap(object):
         return False      
     
     def _getDiagCost(self, coord, previous=None, keys=None):
-        """
-        Returns the cost of the terrain type at coord, read from costs dictionary.
+        """Returns the cost of the terrain type at coord, read from costs dictionary.
         If previous supplied, return val based on relative locations to prohibit corner-cutting
+        Appropriate multiplier (for straights and diagonals) comes from setCostModel()
         """
 
-        # water is only passable from other water (added to conform to movingai restriction
-        # but commented out to facilitate eval on mixed-cost maps - as below)
-        # if self.getCell(coord) == "W" and previous and not self.getCell(previous) == "W":
-        # return float('inf')
+        if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
+            return float('inf')
+
+        # get the terrain type for coord
+        coord_type = self.getCell(coord)
+        
+        if previous:
+            #for uniform-cost maps, water is only navigable from other water
+            if self.uniform and coord_type == "W" and not self.getCell(previous) == "W":
+                return float('inf')
+            isDiagonalMove = self.isDiag(previous, coord)
+            if isDiagonalMove:
+                if self.cutsCorner(previous, coord, keys):
+                    return float('inf')
+                else:
+                    return self.diagmulti * self.costs[coord_type]
+            else:
+                return self.straightmulti * self.costs[coord_type]
+        else:
+            return self.costs[coord_type]
+
+    def _getRealCost(self, coord, previous=None, keys=None):
+        """
+        Called as getCost() when mixed-real cost model is selected. Returns the cost of 
+        the terrain type at coord, read from costs dictionary.
+        If previous supplied, checks for corner-cutting and provides straight/diagonal 
+        cost based on terrain type, read from mixed cost dictionary.
+        """
 
         if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
             return float('inf')
@@ -195,27 +233,26 @@ class LogicalMap(object):
         coord_type = self.getCell(coord)
  
         if previous:
-            previous_type = self.getCell(previous)
             isDiagonalMove = self.isDiag(previous, coord)
-            if isDiagonalMove:
-                # diagonal move - need to check corner cutting
-                coord_x, coord_y = coord
-                previous_x, previous_y = previous
-                dX = previous_x - coord_x
-                dY = previous_y - coord_y
-    
-                # check corner cutting
-                if self.isPassable((coord_x, coord_y + dY), keys=keys) and self.isPassable((coord_x + dX, coord_y), keys=keys):
-                    return self.getMixedCost(previous_type, coord_type, True)
-                else:
+            if isDiagonalMove and self.cutsCorner(previous, coord, keys):
                     return float('inf')
             else:
-                return self.getMixedCost(previous_type, coord_type)
+                previous_type = self.getCell(previous)
+                return self.getMixedCost(previous_type, coord_type, isDiagonalMove)
         else:
             return self.costs[coord_type]
-
         
-        
+    def cutsCorner(self, previous, coord, keys):
+        """ returns true if diagonal move cuts corner, false otherwise. Calling program must verify that this is a diagonal move before calling cutsCorner()"""
+        coord_x, coord_y = coord
+        previous_x, previous_y = previous
+        dX = previous_x - coord_x
+        dY = previous_y - coord_y
+        if self.isCellTraversable((coord_x, coord_y + dY), keys=keys) and self.isCellTraversable((coord_x + dX, coord_y), keys=keys):
+            return False
+        else:
+            return True
+            
     def _getNonDiagCost(self, coord, previous=None, keys=None):
         """
         Returns the cost of the terrain type at coord, read from costs dictionary.
@@ -224,15 +261,8 @@ class LogicalMap(object):
         :param coord: The coordinates
         :param previous:  The previous coordinates. If previous supplied, calc based on relative locations
         :rtype : float
+        TODO - bring this into line with new _getDiagCost!!!!!!!!!!!!!! - i.e.4 x cost models, etc.
         """
-        # water is only passable from other water - test removed as above to facilitate
-        # eval with mixed-cost maps - if restoring, restore in both places.
-        # try:
-        # if self.getCell(coord) == "W" and previous and not self.getCell(previous) == "W":
-        # return float('inf')
-        # except:
-        # return float('inf')
-        # else:
         if previous and self.isDiag(previous, coord):
             return float('inf')
         else:
@@ -287,7 +317,6 @@ class LogicalMap(object):
             return self.costs[self.getCell(coord)] < float('inf')
 
     def isPassable(self, coord, previous=None, keys=None):
-#     def isPassable(self, coord, keys=None):
         """
         If previous not give, returns True if the terrain at coord is passable, False otherwise.
         If previous is give, returns True if the terrain at coord is passable and move from previous-->cord is legal, False otherwise.
@@ -459,10 +488,15 @@ class LogicalMap(object):
             # build mixedmatrix
             for x in self.costs:
                 for y in self.costs:
+                    #handle water from non-water for uniform cost maps
+                    if self.uniform == True and y == "W" and not x == "W":
+                        self.mixedmatrix[x,y,True] = float('inf')
+                        self.mixedmatrix[x,y,False] = float('inf')
+                    else:
                     # diagonal moves
-                    self.mixedmatrix[x,y,True] = (self.costs[x] + self.costs[y]) * sqrt(.5)
-                    # straight moves
-                    self.mixedmatrix[x,y,False] = (self.costs[x] + self.costs[y]) / 2.0
+                        self.mixedmatrix[x,y,True] = (self.costs[x] + self.costs[y]) * self.SQRT05
+                        # straight moves
+                        self.mixedmatrix[x,y,False] = (self.costs[x] + self.costs[y]) / 2.0
 
         except EnvironmentError:
             print("Error parsing map file")

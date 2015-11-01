@@ -38,6 +38,7 @@ parser.add_argument('-gui', action='store_true', dest='GUI', default = False, he
 parser.add_argument('-e', action='store', dest='HEURISTIC', default="euclid", help="euclid, manhattan, or octile")
 parser.add_argument('-r', action='store', dest='SPEED', default=0, help="speed (rate)")
 parser.add_argument('-f', action='store', dest='FREE_TIME', default=0, help="steps returned <FREE_TIME are untimed, i.e., counted as 0 secs (default to 0.005)")
+parser.add_argument('-c', action='store', dest='COST_MODEL', default="mixed", help="mixed, mixed-real, mixed-opt1, or mixed-opt2")
 parser.add_argument('-auto', action='store_true', dest='AUTO', default=False, help="running automatically (default false)")
 parser.add_argument('-version', action='version', version='P4 Path Planning Simulator ' + VERSION)
 parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=False, help="make changes based on script.py (default false)")
