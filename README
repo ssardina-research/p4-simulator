@@ -27,30 +27,41 @@ and output is delivered in csv format.
 USAGE
 =====
 
+usage: p4.py [-h] [-m MAP_FILE] [-s START] [-g GOAL] [-a AGENT_FILE] [-nodiag]
+             [-d DEADLINE] [-gui] [-e HEURISTIC] [-r SPEED] [-f FREE_TIME]
+             [-c COST_MODEL] [-auto] [-version] [-dynamic] [-nonstrict] [-pre]
+             [-batch [BATCH [BATCH ...]]]
+             [CFG_FILE]
 
- # python p4.py -h
-
-Displays a help screen, with similar info to that shown here
-
- # python p4.py [<config_file>]
-
-The config_file supplies settings as Python variables and includes information
-such as what map and search algorithm to use. See config.py for expected format.
-If config_file or file path not supplied, looks for default config.py.
-
- # python p4.py -m <MAP_FILE> -s <START> -g <GOAL> -a <AGENT_FILE> \
- 	[-d <DEADLINE> -f <FREE_TIME> -e <euclid|manhattan> -r <SPEED> -nodiag -gui 
-    -auto -dynamic -nonstrict -pre]
    where:
+   	  CFG_FILE
+		Configuration file with all settings as Python variables and includes information
+		such as what map and search algorithm to use. See config.py for expected format.
+		If config_file or file path not supplied, looks for default config.py.
       MAP_FILE is a file in movingai format
-      	if MAP_FILE is just a file name, it is assumed to be in ../maps/ sister folder
+      	if MAP_FILE is just a file name with no direcotry, it is assumed to be in ../maps/ sister folder
       AGENT_FILE is a file with prescribed API, saved to the AGENTS subfolder
+      	if AGENT_FILE is just a file name with no direcotry, it is assumed to be in agents/ sister folder
       START is a tuple with start location in (col,row) format
       GOAL is a tuple with goal location in (col,row) format
       DEADLINE is time limit in seconds, defaults to None
       SPEED is a time delay in seconds between moves, defaults to 0
       TIMER defaults to clock
       FREE_TIME seconds to consider a step "for free"
+      COST_MODEL is the cost model when using mixed-cost grids; it could be:
+      	mixed: one used in the contest using sqrt(2) for diagonals
+      		straight moves are 1*cost of destination
+      		diagonal moves are sqrt(2)*cost of destination
+      	mixed-real: full center-to-center cost between source and destination cell
+      	mixed-opt1: like mixed but optimized to 1.5 
+      		straight moves are 1*cost of destination
+      		diagonal moves are 1.5*cost of destination
+      	mixed-opt2: like mixed but optimized to 1.5*2  
+			straight moves are 2*cost of destination
+      		diagonal moves are 3*cost of destination
+
+	OPTIONS:
+	  -h - print help information
       -nodiag - disallows diagonal moves 
       -gui - displays gui
       -auto - suppresses info messages and outputs result in csv format
@@ -65,6 +76,8 @@ If config_file or file path not supplied, looks for default config.py.
         name is the prefix up to .map included. For example, if the <SCEN_FILE> 
         is ../maps/bgmaps/AR0011SR.map.aopd.scen, then the map to be used will be file 
         ../maps/bgmaps/AR0011SR.map. The map names inside the .scen file will be ignored. 
+
+
 
 Run a BATCH of scenarios described in AR0011SR.map.scen scenario file:
 
@@ -150,36 +163,13 @@ DIR STRUCTURE
 Supplied Files include:
 
 [docs]
-   V1 - includes useful test scripts in the FullProjectDoco
-   UserGuide
-   DevGuide
+   Documentation
 [maps]
-   blasted.map
-   maze1.map
-   maze2.map
-   diamond-256.map
-   battleground.map
-   bloodvenomfalls.map
-   diamond-512.map
-   donkeykong.map
+   Default map location
 [src]
-   config.py - settings
-   p4.py - script to launch p4
-   p4_controller
-   p4_graph
-   p4_model
-   p4_view
-   p4_view_map
-   p4_utils
+   All source code for simulator
    [agents]
-      __init__.py
-      agent_astar       - A*
-      agent_das         - Deadline Aware Search
-      agent_greedy 
-      agent_jps         - Jump Point Search
-      agent_random
-      agent_rta         - Real Time A*
-      agent_rwa         - Restart Weighted A*
+	   Default agent location
 
 TECHNICAL INFO
 ==============
