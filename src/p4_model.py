@@ -515,3 +515,12 @@ class LogicalMap(object):
         if char in self.costs and self.cellWithinBoundaries(position):
             x, y = position
             self.matrix[x][y] = char
+
+    def validator(self, path):
+        """Checks validity of path and returns cost. Invalid path returns infinity.
+        List comprehension calls getCost() on every pair of coordinates. 
+        Uses current cost model and assumes path is ordered from start to goal.
+        :type path: list of tuples [(col, row),(col, row), ...] 
+        :rtype: float
+        """
+        return sum([self.getCost(path[i],path[i-1]) for i in range(len(path))[1:]])
