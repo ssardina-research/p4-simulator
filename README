@@ -49,7 +49,7 @@ usage: p4.py [-h] [-m MAP_FILE] [-s START] [-g GOAL] [-a AGENT_FILE] [-nodiag]
       TIMER defaults to clock
       FREE_TIME seconds to consider a step "for free"
       COST_MODEL is the cost model when using mixed-cost grids; it could be:
-      	mixed: one used in the contest using sqrt(2) for diagonals
+      	mixed (DEFAULT): one used in the contest using sqrt(2) for diagonals
       		straight moves are 1*cost of destination
       		diagonal moves are sqrt(2)*cost of destination
       	mixed-real: full center-to-center cost between source and destination cell
