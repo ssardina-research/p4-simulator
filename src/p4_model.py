@@ -45,9 +45,9 @@ class LogicalMap(object):
         self.getCost = self._getDiagCost
         self.neighbours = []
 
-        # terrain types in costs dict will be replaced by values from map header
-        self.costs = {".": "ground", "G": "ground", "0": float('inf'),
-                      "@": float('inf'), "S": "swamp", "T": "tree", "W": "water"}
+        # terrain types and default costs as per http://movingai.com/benchmarks/formats.html
+        self.terrains = {"ground" : "G", "ground1" : ".", "water" : "W", "swamp" : "S", "tree" : "T"}
+        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": 1}
                       
         # dictionary to hold precalculated costs for straight and diagonal moves between terrain types
         self.mixedmatrix = {}
@@ -129,14 +129,11 @@ class LogicalMap(object):
         else:
             self.getCost = self._getRealCost      
 
-    def setCostCells(self, costCells={'tree': float('inf'), 'water': 1, 'swamp': 1, 'ground': 1}):
-        """Sets the cost of different cells - if missing set to uniform 1 as movingai http://movingai.com/benchmarks/formats.html"""
-        self.uniform = False
-        
-        for terrain in costCells:
-            for abbrev in self.costs:
-                if terrain == self.costs[abbrev]:
-                    self.costs[abbrev] = costCells[terrain]
+    def setCostCells(self, costCells={}):
+        """Sets the cost of cells as per costCells- if missing, leave existing cost """
+        for terrain in (set(costCells.keys()).intersection(self.terrains.keys())):
+            abbrev = self.terrains[terrain]
+            self.costs[abbrev] = costCells[terrain]
 
     def setDiagonal(self, d):
         """Explicitly set methods to be used when getAdjacents() or isAdjacent() called."""
@@ -492,21 +489,19 @@ class LogicalMap(object):
                             else:   
                                 self.info[key] = int(parsed[1]) 
                 
-                # replace terrain types with costs
-                if len(self.info.keys()) < 3:
+                # replace terrain types with costs obtained from map (if any), then guess whether it is uniform or not
+                self.setCostCells(self.info)  # set cost as per read from the map file above
+                if len(set(self.costs.values()).difference(set([float('inf')]))) == 1:
+#                 if all(self.costs[x] == self.costs['G'] for x in ('W', '.', 'S')):
                     self.uniform = True
-                    self.setCostCells()  # set default uniform costs
                 else:
                     self.uniform = False
-                    self.setCostCells(self.info)  # set cost as per read from the map file above
 
-            
-            
             # now we have everything, build mixedmatrix
             for x in self.costs:
                 for y in self.costs:
                     # handle water from non-water for uniform cost maps
-                    if self.uniform == True and y == "W" and not x == "W":
+                    if self.uniform and y == "W" and not x == "W":
                         self.mixedmatrix[x, y, True] = float('inf')
                         self.mixedmatrix[x, y, False] = float('inf')
                     else:

@@ -152,13 +152,6 @@ class SimController(object):
         self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
         self.lmap.setCostModel(self.cfg.get("COST_MODEL"))
 
-        if self.cfg["COST_FILE"]:
-            try:
-                pass
-#             self.lmap.setCostCells(self.cfg.get("COST"))
-            except:
-                print("Setting cost of cells from command line failed.")
-                print(traceback.format_exc())
         if self.cfg["PREPROCESS"]:
             try:
                 self.agent.preprocess(self.lmap)
