@@ -133,8 +133,14 @@ class SimController(object):
             mappath = os.path.join("..", "maps", self.cfg["MAP_FILE"])
             if not os.path.exists(mappath):
                 mappath = None
+
+            # if cost file exists, get file 
+            costpath = None
+            if self.cfg["COST_FILE"] and os.path.exists(self.cfg["COST_FILE"]):
+                costpath = os.path.join(self.cfg["COST_FILE"])
+
             # create logical map object
-            self.lmap = LogicalMap(mappath)
+            self.lmap = LogicalMap(mappath, costpath)
         except:
             raise p4.BadMapException()
             
@@ -145,6 +151,14 @@ class SimController(object):
         self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
         self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
         self.lmap.setCostModel(self.cfg.get("COST_MODEL"))
+
+        if self.cfg["COST_FILE"]:
+            try:
+                pass
+#             self.lmap.setCostCells(self.cfg.get("COST"))
+            except:
+                print("Setting cost of cells from command line failed.")
+                print(traceback.format_exc())
         if self.cfg["PREPROCESS"]:
             try:
                 self.agent.preprocess(self.lmap)

@@ -22,7 +22,7 @@ import p4_controller
 import re
 
 # Version of P4
-VERSION = "2.1"
+VERSION = "3"
 
 # Construct parser object
 parser = argparse.ArgumentParser(description="P4 Path Planning Simulator - Version " + VERSION)
@@ -34,18 +34,19 @@ parser.add_argument('-a', action='store', dest='AGENT_FILE', help="agent filenam
 # Note, by default DIAGONAL is true. If -nodiag is set, DIAGONAL becomes false.
 parser.add_argument('-nodiag', action='store_false', dest='DIAGONAL', default=True, help="disallow diagonal moves (default diagonals allowed)")
 parser.add_argument('-d', action='store', dest='DEADLINE', default=0, help="deadline in seconds")
-parser.add_argument('-gui', action='store_true', dest='GUI', default = False, help="display gui (default false)")
+parser.add_argument('-gui', action='store_true', dest='GUI', default=False, help="display gui (default false)")
 parser.add_argument('-e', action='store', dest='HEURISTIC', default="euclid", help="euclid, manhattan, or octile")
 parser.add_argument('-r', action='store', dest='SPEED', default=0, help="speed (rate)")
 parser.add_argument('-f', action='store', dest='FREE_TIME', default=0, help="steps returned <FREE_TIME are untimed, i.e., counted as 0 secs (default to 0.005)")
-parser.add_argument('-c', action='store', dest='COST_MODEL', default="mixed", help="mixed, mixed-real, mixed-opt1, or mixed-opt2")
+parser.add_argument('-cm', action='store', dest='COST_MODEL', default="mixed", help="mixed, mixed-real, mixed-opt1, or mixed-opt2")
+parser.add_argument('-c', action='store', dest='COST_FILE', help="file with cost of cells")
 parser.add_argument('-auto', action='store_true', dest='AUTO', default=False, help="running automatically (default false)")
 parser.add_argument('-version', action='version', version='P4 Path Planning Simulator ' + VERSION)
 parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=False, help="make changes based on script.py (default false)")
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
-parser.add_argument('-batch', nargs='*', dest='BATCH', action ='store', help="run scenario in batch mode. Requires .scen file and .csv file for results. Optionally takes integer as 3rd argument for number of repetitions across which test times are to be averaged.")
+parser.add_argument('-batch', nargs='*', dest='BATCH', action='store', help="run scenario in batch mode. Requires .scen file and .csv file for results. Optionally takes integer as 3rd argument for number of repetitions across which test times are to be averaged.")
 parser.add_argument
 args = parser.parse_args()
 
@@ -74,6 +75,8 @@ if args.BATCH is not None:
             args.MAP_FILE = ''
         print(args.MAP_FILE)
         print("Map to be used for batch run: " + args.MAP_FILE)
+        if args.COST_FILE:
+            print("Cost file to be used for batch run: " + args.COST_FILE)
         print("Agent to be used for batch run: " + args.AGENT_FILE)
 
 # If map file named available (command line or batch mode), take it. Otherwise, use one in config file

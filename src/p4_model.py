@@ -26,17 +26,17 @@ class LogicalMap(object):
     This version returns float('inf') for non-traversable cells.
     """
 
-    def __init__(self, mappath=None):
+    def __init__(self, mappath=None, costpath=None):
         """Constructor. Sets default method calls, initialises class attributes,
            calls _readMap()"""
         self.SQRT2 = sqrt(2)
         self.SQRT05 = sqrt(.5)
-        self.OCT_CONST = self.SQRT2-1
+        self.OCT_CONST = self.SQRT2 - 1
         DEFAULT_HEIGHT = 512
         DEFAULT_WIDTH = 512
         self.uniform = True
         
-        self.cellWithinBoundaries = self.isMapped   #for backward compatibility
+        self.cellWithinBoundaries = self.isMapped  # for backward compatibility
 
         # Default method calls. If getH() is called, by default run euclid(), etc.
         self.getH = self._euclid
@@ -59,8 +59,8 @@ class LogicalMap(object):
         self.key_and_doors = {}
 
         if mappath is not None:
-            #print("Opening " + mappath)
-            self._readMap(mappath)
+            # print("Opening " + mappath)
+            self._readMap(mappath, costpath)
             # if readMap fails, SystemExit reports to command line and quits
             if self.matrix is None:
                 print("Failed to load file!\n")
@@ -117,10 +117,10 @@ class LogicalMap(object):
             
     def setCostModel(self, cm="mixed"):
         """Sets straight and diagonal multipliers based on whichever cost model is in use."""
-        if cm=="mixed":
+        if cm == "mixed":
             self.straightmulti = 1
             self.diagmulti = self.SQRT2
-        elif cm =="mixed_opt1":
+        elif cm == "mixed_opt1":
             self.straightmulti = 1
             self.diagmulti = 1.5
         elif cm == "mixed_opt2":
@@ -128,6 +128,15 @@ class LogicalMap(object):
             self.diagmulti = 3
         else:
             self.getCost = self._getRealCost      
+
+    def setCostCells(self, costCells={'tree': float('inf'), 'water': 1, 'swamp': 1, 'ground': 1}):
+        """Sets the cost of different cells - if missing set to uniform 1 as movingai http://movingai.com/benchmarks/formats.html"""
+        self.uniform = False
+        
+        for terrain in costCells:
+            for abbrev in self.costs:
+                if terrain == self.costs[abbrev]:
+                    self.costs[abbrev] = costCells[terrain]
 
     def setDiagonal(self, d):
         """Explicitly set methods to be used when getAdjacents() or isAdjacent() called."""
@@ -204,7 +213,7 @@ class LogicalMap(object):
         coord_type = self.getCell(coord)
         
         if previous:
-            #for uniform-cost maps, water is only navigable from other water
+            # for uniform-cost maps, water is only navigable from other water
             if self.uniform and coord_type == "W" and not self.getCell(previous) == "W":
                 return float('inf')
             isDiagonalMove = self.isDiag(previous, coord)
@@ -390,7 +399,7 @@ class LogicalMap(object):
              for x in range(col - 1, col + 2)
              for y in range(row - 1, row + 2)
              if not ((x == col and y == row) or x < 0 or y < 0 or x > self.width - 1 or y > self.height - 1)
-             #if (x,y) is not position and self.cellWithinBoundaries((x,y)) 
+             # if (x,y) is not position and self.cellWithinBoundaries((x,y)) 
         ]
         return L
 
@@ -422,9 +431,9 @@ class LogicalMap(object):
         """Internal. Called as getH() if HEURISTIC set to 'octile'"""
         xlen = fabs(current[0] - goal[0])
         ylen = fabs(current[1] - goal[1])
-        return max(xlen,ylen) + self.OCT_CONST * min(xlen,ylen)
+        return max(xlen, ylen) + self.OCT_CONST * min(xlen, ylen)
 
-    def getMixedCost(self, terrain1, terrain2, diag = False):
+    def getMixedCost(self, terrain1, terrain2, diag=False):
         """
         Returns cost from mixedmatrix based on terrain types passed in.
         Default returns cost of straight move. For diagonal move, set diag to True.
@@ -436,7 +445,8 @@ class LogicalMap(object):
         """
         return self.mixedmatrix.get((terrain1, terrain2, diag))
         
-    def _readMap(self, mappath):
+
+    def _readMap(self, mappath, costpath):
         """
         Internal. Generates matrix. Initialises info and populates costs.
         Called from init. Sets matrix to None if map load fails.
@@ -446,7 +456,7 @@ class LogicalMap(object):
         self.info = {}
         try:
             with open(mappath, "r") as f:
-                #print("Parsing")
+                # print("Parsing")
                 for line in f:
                     if line.strip() == 'map':
                         break
@@ -456,47 +466,54 @@ class LogicalMap(object):
                         continue
                     elif parsed[1] == "+inf":
                         self.info[key] = float("inf")
-                    elif key == "key":
+                    elif key == "key":  # this if the map includes keys/objects
                         i = 3
                         key_location = (int(parsed[1]), int(parsed[2]))
                         self.key_and_doors[key_location] = []
                         while i + 1 < len(parsed):
                             self.key_and_doors[key_location].append((int(parsed[i]), int(parsed[i + 1])))
                             i += 2
-                        #print(self.key_and_doors)
-                    else:
-                        self.info[key] = int(parsed[1])
+                        # print(self.key_and_doors)
+                    else:   
+                        self.info[key] = int(parsed[1]) 
                 # generate matrix - using 'zip' so that it reads back (col, row)
                 _matrix = [list(line.rstrip()) for line in f]
-                self.matrix = [list(x) for x in zip(*_matrix)]  #make it a list so can change it
-                #self.matrix = list(zip(*_matrix))
+                self.matrix = [list(x) for x in zip(*_matrix)]  # make it a list so can change it
+                # self.matrix = list(zip(*_matrix))
+
+                # if cost file specified, read it and overwrite whatever cost is so far
+                if costpath:
+                    with open(costpath, "r") as f:
+                        for line in f:
+                            parsed = line.split()
+                            key = parsed[0]
+                            if parsed[1] == "+inf":
+                                self.info[key] = float("inf")
+                            else:   
+                                self.info[key] = int(parsed[1]) 
+                
                 # replace terrain types with costs
                 if len(self.info.keys()) < 3:
                     self.uniform = True
-                    self.costs["."] = 1
-                    self.costs["S"] = 1
-                    self.costs["G"] = 1
-                    # getCost returns inf for W if accessed from other than W
-                    self.costs["W"] = 1
-                    self.costs["T"] = float('inf')
+                    self.setCostCells()  # set default uniform costs
                 else:
                     self.uniform = False
-                    for terrain in self.info:
-                        for abbrev in self.costs:
-                            if terrain == self.costs[abbrev]:
-                                self.costs[abbrev] = self.info[terrain]
-            # build mixedmatrix
+                    self.setCostCells(self.info)  # set cost as per read from the map file above
+
+            
+            
+            # now we have everything, build mixedmatrix
             for x in self.costs:
                 for y in self.costs:
-                    #handle water from non-water for uniform cost maps
+                    # handle water from non-water for uniform cost maps
                     if self.uniform == True and y == "W" and not x == "W":
-                        self.mixedmatrix[x,y,True] = float('inf')
-                        self.mixedmatrix[x,y,False] = float('inf')
+                        self.mixedmatrix[x, y, True] = float('inf')
+                        self.mixedmatrix[x, y, False] = float('inf')
                     else:
                     # diagonal moves
-                        self.mixedmatrix[x,y,True] = (self.costs[x] + self.costs[y]) * self.SQRT05
+                        self.mixedmatrix[x, y, True] = (self.costs[x] + self.costs[y]) * self.SQRT05
                         # straight moves
-                        self.mixedmatrix[x,y,False] = (self.costs[x] + self.costs[y]) / 2.0
+                        self.mixedmatrix[x, y, False] = (self.costs[x] + self.costs[y]) / 2.0
 
         except EnvironmentError:
             print("Error parsing map file")
