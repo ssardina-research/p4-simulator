@@ -331,6 +331,7 @@ class SimController(object):
             try:
                 clockstart = timer()  # start timer
                 nextreturn = self.agent.getNext(self.lmap, current, target, self.timeremaining)
+#                 print(nextreturn)
                 clockend = timer()
             except:
                 raise p4.BadAgentException()
