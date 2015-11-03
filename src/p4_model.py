@@ -46,8 +46,9 @@ class LogicalMap(object):
         self.neighbours = []
 
         # terrain types and default costs as per http://movingai.com/benchmarks/formats.html
+        # water is untraversable in general, unless coming from water itself (see below)
         self.terrains = {"ground" : "G", "ground1" : ".", "water" : "W", "swamp" : "S", "tree" : "T"}
-        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": 1}
+        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": float('inf')}
                       
         # dictionary to hold precalculated costs for straight and diagonal moves between terrain types
         self.mixedmatrix = {}
@@ -211,9 +212,12 @@ class LogicalMap(object):
         
         if previous:
             # for uniform-cost maps, water is only navigable from other water
-            if self.uniform and coord_type == "W" and not self.getCell(previous) == "W":
-                return float('inf')
             isDiagonalMove = self.isDiag(previous, coord)
+            if self.uniform and coord_type == "W" and self.getCell(previous) == "W":
+                if isDiagonalMove:
+                    return self.diagmulti * self.costs['G']
+                else:
+                    return self.straightmulti * self.costs['G']
             if isDiagonalMove:
                 if self.cutsCorner(previous, coord, keys):
                     return float('inf')
@@ -248,7 +252,7 @@ class LogicalMap(object):
         else:
             return self.costs[coord_type]
         
-    def cutsCorner(self, previous, coord, keys):
+    def cutsCorner(self, previous, coord, keys=None):
         """ returns true if diagonal move cuts corner, false otherwise. Calling program must verify that this is a diagonal move before calling cutsCorner()"""
         coord_x, coord_y = coord
         previous_x, previous_y = previous
@@ -260,6 +264,7 @@ class LogicalMap(object):
             return True
             
     def _getNonDiagCost(self, coord, previous=None, keys=None):
+        #TODO: is this correct? what about water-to-water for uniform grids?
         """
         Returns the cost of the terrain type at coord, read from costs dictionary.
         :type previous: (int,int)
