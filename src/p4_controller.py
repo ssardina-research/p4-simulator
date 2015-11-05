@@ -133,6 +133,9 @@ class SimController(object):
             mappath = os.path.join("..", "maps", self.cfg["MAP_FILE"])
             if not os.path.exists(mappath):
                 mappath = None
+                if not self.cfg["AUTO"]:
+                    print "Map file not found: loading default."
+                self.cfg["MAP_FILE"]=None
 
             # if cost file exists, get file 
             costpath = None

@@ -67,13 +67,14 @@ class LogicalMap(object):
                 print("Failed to load file!\n")
                 raise SystemExit
         else:
-
             # if mappath == None, readMap not attempted and default-sized matrix is all set to '.'
             self.matrix = [["." for col in range(DEFAULT_WIDTH)]
                            for row in range(DEFAULT_HEIGHT)]
             self.info = {"height": DEFAULT_HEIGHT, "width": DEFAULT_WIDTH}
             self.costs["."] = 1
-
+            self.mixedmatrix[".",".",True] = self.SQRT2
+            self.mixedmatrix[".",".",False] = 1
+            
     def _getDiffAdjs(self, coord):
         """returns adjacents with different cost from cell passed in as coord
         :type coord: tuple
@@ -147,17 +148,14 @@ class LogicalMap(object):
             self.isAdjacent = self._isNonDiagAdjacent
             self.getCost = self._getNonDiagCost
 
-    def getCell(self, position):
+    def getCell(self, (col, row)):
         """Returns character at (col, row) representing type of terrain there. Returns @ (oob) if call fails
         :type col: int
         :type row: int
         """
-        (col, row) = position
-        col = int(col)
-        row = int(row)
-        if self.cellWithinBoundaries((col, row)):
+        try:
             return self.matrix[col][row]
-        else:
+        except:
             return '@'
         
     def isKey(self, position):
