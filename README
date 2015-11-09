@@ -78,37 +78,41 @@ usage: p4.py [-h] [-m MAP_FILE] [-s START] [-g GOAL] [-a AGENT_FILE] [-nodiag]
         ../maps/bgmaps/AR0011SR.map. The map names inside the .scen file will be ignored. 
 
 
+EXAMPLES (all run inside src/)
 
-Run a BATCH of scenarios described in AR0011SR.map.scen scenario file:
+- Run standard ASTAR in uniform cost with a deadline of 4 seconds:
 
-	# python p4.py -batch ../maps/bgmaps/AR0011SR.map.scen astar_batch.csv 3 -a agent_astar
-      
-Run the GUI with a random agent:
+	# python p4.py -m ../maps/bloodvenomfalls.map -s 128,405 -g 403,93 -d 4 -a agent_astar
+
+	OUTPUT:
+	Total Cost : 499.4579 | Total Steps : 422 | Time Remaining : inf | Total Time : 1.258769
+     
+- Same but for WINDOWS (locations need to be within parenthesis):      
+
+	# python p4.py -m ../maps/bloodvenomfalls.map -s (128,405) -g (403,93) -d 4 -a agent_astar
+     
+- Run the GUI with a random agent:
 
 	# python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_random  -e euclid -d 20 -gui
 
+- Run with mixed cost:
 
-An example of a command line call is (run this from inside src/)
+	# python p4.py -m ../maps/bloodvenomfalls.map -c ../maps/mixedcost/G1-W5-S10.cost -s 128,405 -g 403,93 -a agent_astar
 
-   Run ASTAR in ../maps/testmap.map (around 0.26secs):
-   
-   # python p4.py -m testmap.map -s 155,123 -g 309,203 -a agent_astar  -e euclid -d 20
-   or in Windows:
-     python p4.py -m testmap.map -s (155,123) -g (309,203) -a agent_astar  -e euclid -d 20
+- Run a BATCH of scenarios described in AR0011SR.map.scen scenario file:
 
-   Run ASTAR in a harder problem with a solution of cost 510.41 and 440 steps ( (around 1.5secs):
-   
-   # python p4.py -m AR0306SR.map  -s 218,110 -g 444,386 -a agent_astar  -e euclid -d 20
-    or in Windows:
-     python p4.py -m AR0306SR.map  -s (218,110) -g (444,386) -a agent_astar  -e euclid -d 20
-    
-   Same but using JPS (around 0.4secs):
+	# python p4.py -batch ../maps/bgmaps/AR0011SR.map.scen astar_batch.csv 3 -a agent_astar
 
-   # python p4.py -m AR0306SR.map -s 218,110 -g 444,386 -a agent_jps  -e euclid -d 20
-    or in Windows:
-     python p4.py -m AR0306SR.map -s (218,110) -g (444,386) -a agent_jps  -e euclid -d 20
-    
-Output is of the form:
+	astar_batch.csv is where data will be written
+	3 is the number of times the search is run on each problem instance (and then results averaged)
+
+- Run from a config file:
+
+	# python p4.py config.py
+
+
+
+OUTPUT is of the form:
 
        Total Cost : 510.416305603 | Total Steps : 440 | Time Remaining : 19.519 | Total Time : 0.48086
 
@@ -127,6 +131,8 @@ In the src, directory, run the Python interpreter
 >>>l = m.LogicalMap("../maps/mixedcost3.map")   #or other existing map
 >>># now you can interrogate the model, e.g...
 >>>l.getCost((0,0))                         #note double brackets
+
+
 
 
 BATCH & PROFILING (UNIX)
