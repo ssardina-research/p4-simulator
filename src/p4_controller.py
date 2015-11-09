@@ -275,14 +275,14 @@ class SimController(object):
         nextstep = self.cfg["START"]
 
         # keep generating next steps as long as goal not in goal & enough time
-        while not nextstep == self.cfg["GOAL"] and self.timeremaining:
+        while not self.cfg["GOAL"] == nextstep and self.timeremaining:
             try:
                 # Don't set signal for infinite time
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        nextstep = self.gen.next()
+                        nextstep = self._get_coordinate(self.gen.next())
                 else:
-                    nextstep = self.gen.next()  # call with no SIGNAL
+                    nextstep = self._get_coordinate(self.gen.next())  # call with no SIGNAL
             except Timeout.Timeout:
                 self.timeremaining = 0
                 self.updateStatus("Timed Out!")
@@ -291,8 +291,28 @@ class SimController(object):
                 print(traceback.format_exc())
                 raise SystemExit()
                 break
+            
         return self.hdlStop()
+    
+    
+    # just kep the first argument of a nextstep, and drop any possible argument for drawing lists
+    def _get_coordinate(self, nextstep):
+            # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
+            if isinstance(nextstep[1], (list, tuple)):
+                return nextstep[0]
+            else:
+                return nextstep
 
+
+    # just kep the second argument of a nextstep (the list for drawings), and drop the coordinate
+    def _get_drawing_lists(self, nextstep):
+            # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
+            # is the second part of nextstep (list1,list2,list3)? If so, just keep the coordinate argument
+            if isinstance(nextstep[1], (list, tuple)):
+                return nextstep[1]
+            else:
+                return None
+    
     def stepGenerator(self, current, target):
         """
         Generator referenced by self.gen
@@ -457,15 +477,9 @@ class SimController(object):
                 self.updateStatus("Agent returned " + str(nextreturn), False)
                 self.hdlStop()
             else:
-                # try/except to distinguish single step from step plus sets of coordinates
-                try:  # process sets of coordinates
-                    x = nextreturn[1][0]
-                except TypeError:
-                    nextstep = nextreturn
-                else:
-                    #something to draw
-                    #self.updateStatus("Drawing...", False)
-                    nextstep, coordsets = nextreturn
+                # does nextreturn include a list of coordinates to draw?
+                if isinstance(nextreturn[1], (list, tuple)):
+                    nextstep, coordsets  = nextreturn
                     for coordset in coordsets:
                         if coordset[1] == 'reset':
                             self.gui.vmap.clear(coordset[0], self.lmap)
@@ -476,22 +490,26 @@ class SimController(object):
                     self.fullsearchflag = True
                     self.coordsets = coordsets
                     #self.updateStatus("Plotting path...", False)
-                finally:  # paint path
-                    self.gui.vmap.drawSet(self.path, "blue")
-                    self.gui.vmap.drawPoint(nextstep, "white")
-                    self.current = nextstep
-                    self.path.add(nextstep)
-                    if isinstance((self.pathcost),int):
-                        currcost = str(self.pathcost)
-                    else:
-                        currcost = '{0:.2f}'.format(self.pathcost)
-                    message = str(nextstep) + " | Cost : " + currcost + \
-                        " | Steps : " + str(self.pathsteps)
-                    if self.cfg.get("DEADLINE"):
-                        message += " | Time remaining: " + \
-                            str(self.timeremaining)
-                    self.updateStatus(message)
-                    sleep(self.cfg.get("SPEED"))  # delay, if any
+                else:
+                    # nextreturn just includes the next coordinate, no drawing data
+                    nextstep = nextreturn
+                    
+                 # Paint path
+                self.gui.vmap.drawSet(self.path, "blue")
+                self.gui.vmap.drawPoint(nextstep, "white")
+                self.current = nextstep
+                self.path.add(nextstep)
+                if isinstance((self.pathcost),int):
+                    currcost = str(self.pathcost)
+                else:
+                    currcost = '{0:.2f}'.format(self.pathcost)
+                message = str(nextstep) + " | Cost : " + currcost + \
+                    " | Steps : " + str(self.pathsteps)
+                if self.cfg.get("DEADLINE"):
+                    message += " | Time remaining: " + \
+                        str(self.timeremaining)
+                self.updateStatus(message)
+                sleep(self.cfg.get("SPEED"))  # delay, if any
                     
 
     # MENU HANDLERS
