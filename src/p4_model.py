@@ -201,7 +201,6 @@ class LogicalMap(object):
         If previous supplied, return val based on relative locations to prohibit corner-cutting
         Appropriate multiplier (for straights and diagonals) comes from setCostModel()
         """
-
         if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
             return float('inf')
 
@@ -501,6 +500,7 @@ class LogicalMap(object):
                     self.uniform = False
 
             # now we have everything, build mixedmatrix
+            #TODO: fix this to respect the input cost model
             for x in self.costs:
                 for y in self.costs:
                     # handle water from non-water for uniform cost maps
@@ -508,10 +508,10 @@ class LogicalMap(object):
                         self.mixedmatrix[x, y, True] = float('inf')
                         self.mixedmatrix[x, y, False] = float('inf')
                     else:
-                    # diagonal moves
-                        self.mixedmatrix[x, y, True] = (self.costs[x] + self.costs[y]) * self.SQRT05
+                        # diagonal moves
+                        self.mixedmatrix[x, y, True] = (self.costs[y]) * self.SQRT2
                         # straight moves
-                        self.mixedmatrix[x, y, False] = (self.costs[x] + self.costs[y]) / 2.0
+                        self.mixedmatrix[x, y, False] = self.costs[y]
 
         except EnvironmentError:
             print("Error parsing map file")
