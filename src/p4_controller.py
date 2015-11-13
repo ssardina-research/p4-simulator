@@ -666,19 +666,22 @@ class SimController(object):
                 
                 times = []
                 for i in xrange(reps):
-                    self.agent.reset()
-                    self.resetVars()
-                    output = self.search()
-                    actual_cost, steps, time, inf = str.split(output, ';')
-                    times.append(float(time))
+                    try:
+                        self.agent.reset()
+                        self.resetVars()
+                        output = self.search()
+                        actual_cost, steps, time, inf = str.split(output, ';')
+                        times.append(float(time))
+                    except:
+                        pass
+                if len(times) > 0:
+                    time = sum(times)/reps    # calculate average
                     
-                time = sum(times)/reps    # calculate average
-                
-                try:
-                    quality = float(optimum)/float(actual_cost)
-                except ZeroDivisionError:
-                    quality = 0
-                fcsv.writerow([self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time, quality])   
+                    try:
+                        quality = float(optimum)/float(actual_cost)
+                    except ZeroDivisionError:
+                        quality = 0
+                    fcsv.writerow([self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, actual_cost, steps, time, quality])   
 
             
 if __name__ == '__main__':
