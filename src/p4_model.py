@@ -489,7 +489,11 @@ class LogicalMap(object):
                             if parsed[1] == "+inf":
                                 self.info[key] = float("inf")
                             else:   
-                                self.info[key] = int(parsed[1]) 
+                                self.info[key] = int(parsed[1])
+
+                # if ground1 is not given, then assume equal to ground
+                if "ground" in self.info and not "ground1" in self.info:
+                    self.info['ground1'] = self.info['ground']
                 
                 # replace terrain types with costs obtained from map (if any), then guess whether it is uniform or not
                 self.setCostCells(self.info)  # set cost as per read from the map file above
