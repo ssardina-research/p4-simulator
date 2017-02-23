@@ -1,0 +1,13 @@
+p4 can now be used as an engine to perform goal recognition. 
+
+NOTES:
+
+* You will need to download .scen and map files from movingai.com, then run gr_probs.py to generate a GR-compatible problem set - this generates extra goals and creates a .GR file. See example CLI call at top of file.
+
+* Beware that some problems in the GR file may not be usable - i.e. if goals happen to be generated in terrain not accessible from the start location). You can check particular start and goal locations by loading map into the p4 simulator in the usual way.
+
+* drop gr_agent_ramirez.py and helper.py into the same directory as the agent you want to use to generate observations - probably <installation>/src/agents/
+
+*run gr.py from the <installation>/src/ directory
+
+* gr.py is the main script. Check the settings at the top of the file. You can limit the permutations by modifying qualities, densities, etc. in the runBatch() routine. Modify call at bottom of file and run as python gr.py.
