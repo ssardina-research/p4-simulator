@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2014-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #

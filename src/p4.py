@@ -1,6 +1,6 @@
 #! /usr/bin/env python2.7
 
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2014-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -40,14 +40,14 @@ parser.add_argument('-r', action='store', dest='SPEED', default=0, help="speed (
 parser.add_argument('-f', action='store', dest='FREE_TIME', default=0, help="steps returned <FREE_TIME are untimed, i.e., counted as 0 secs (default to 0.005)")
 parser.add_argument('-cm', action='store', dest='COST_MODEL', default="mixed", help="mixed, mixed-real, mixed-opt1, or mixed-opt2")
 parser.add_argument('-c', action='store', dest='COST_FILE', help="file with cost of cells")
-parser.add_argument('-auto', action='store_true', dest='AUTO', default=False, help="running automatically (default false)")
 parser.add_argument('-version', action='version', version='P4 Path Planning Simulator ' + VERSION)
 parser.add_argument('-dynamic', action='store_true', dest='DYNAMIC', default=False, help="make changes based on script.py (default false)")
 # Note, similar to DIAGONAL above. By default STRICT is true and impassable cells cannot be traversed. Use of -nonstrict, sets it to false.
 parser.add_argument('-nonstrict', action='store_false', dest='STRICT', default=True, help="allow agent to traverse impassable cells, albeit at infinite cost")
 parser.add_argument('-pre', action='store_true', dest='PREPROCESS', default=False, help="give agent opportunity to preprocess map")
+parser.add_argument('-realtime', action='store_true', dest='REALTIME', default=False, help="time every step (default false)")
 parser.add_argument('-batch', nargs='*', dest='BATCH', action='store', help="run scenario in batch mode. Requires .scen file and .csv file for results. Optionally takes integer as 3rd argument for number of repetitions across which test times are to be averaged.")
-parser.add_argument
+
 args = parser.parse_args()
 
 
@@ -64,10 +64,8 @@ if args.BATCH is not None:
         print ("Agent file not supplied. Terminating...")
         raise SystemExit
     else:
-        # Extract path of map file from path of scenario (justt remove suffix .scen)
-        args.AUTO = True
+        # Extract path of map file from path of scenario (just remove suffix .scen)
         fn = os.path.split(args.BATCH[0])[1]
-#         args.MAP_FILE = args.BATCH[0][:-5]
         # extract map pathname: everything up to .map included
         try:
             args.MAP_FILE = re.match(r'(.*\.map).*', args.BATCH[0]).group(1)
@@ -94,13 +92,11 @@ if args.MAP_FILE is not None:
         raise SystemExit
         
     CFG_FILE = None
-    if args.AUTO is False:
-        #display initial settings - may be defaults (before config file) or from CLI
-        print "\n" + str(args)[9:] + "\n"   #skip 1st 9 chars of output
+    #display initial settings - may be defaults (before config file) or from CLI
+    print "\n" + str(args)[9:] + "\n"   #skip 1st 9 chars of output
     
 else:  #assume using config file, not command line arguments 
-    if args.AUTO is False:
-        print("Checking for configuration file: " + args.CFG_FILE)
+    print("Checking for configuration file: " + args.CFG_FILE)
     # If given config file does not exist, raise exception and terminate
     if not os.path.isfile(args.CFG_FILE):
         print(args.CFG_FILE + " not found. Terminating ... ")

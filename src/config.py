@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2014-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -16,20 +16,20 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 
-AGENT_FILE = "agents-main/agent_astar"   #agent filename - must be in src/agents/
-MAP_FILE  = "AR0306SR.map" #map filename - must be in maps (sister dir to src)
-START     = (218,210)         #coordinates of start location in (col,row) format
-GOAL      = (444,386)        #coordinates of goal location in (col,row) format
+AGENT_FILE = "agent_random"     #agent filename - must be in src/agents/
+MAP_FILE  = "./gr/64room_002.map" #map filename - must be in maps (sister dir to src)
+START     = (81,101)            #coordinates of start location in (col,row) format
+GOAL      = (73,61)             #coordinates of goal location in (col,row) format
 
-
-GUI = False                 #True = show GUI, False = run on command line
-SPEED = 0.0                 #delay between displayed moves in seconds
-DEADLINE = 15               #Number of seconds to reach goal
-HEURISTIC = 'octile'        #may be 'euclid' or 'manhattan' or 'octile' (default = 'euclid')
-DIAGONAL = True             #Only allows 4-way movement when False (default = True)
-FREE_TIME = 0.000           #Steps greater than this are timed (if 0, all steps are timed)
-DYNAMIC = False             #Implements runtime changes found in script.py when True
-STRICT = True               #Allows traversal of impassable cells when False (default = True)
-PREPROCESS = False          #Gives agent opportunity to preprocess map (default = False)
-#COST_MODEL = 'mixed_real'   #May be 'mixed', 'mixed_real', 'mixed_opt1' or 'mixed_opt2' (default='mixed')
+GUI = True                      #True = show GUI, False = run on command line
+SPEED = 0.0                     #delay between displayed moves in seconds
+DEADLINE = 15                   #Number of seconds to reach goal
+HEURISTIC = 'octile'            #may be 'euclid' or 'manhattan' or 'octile' (default = 'euclid')
+DIAGONAL = True                 #Only allows 4-way movement when False (default = True)
+FREE_TIME = 0.000               #Step times > FREE_TIME are timed iff REALTIME = True
+DYNAMIC = False                 #Implements runtime changes found in script.py when True
+STRICT = True                   #Allows traversal of impassable cells when False (default = True)
+PREPROCESS = False              #Gives agent opportunity to preprocess map (default = False)
+#COST_MODEL = 'mixed_real'      #May be 'mixed', 'mixed_real', 'mixed_opt1' or 'mixed_opt2' (default='mixed')
+COST_FILE = 'warcraft.cost'
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2014-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -29,9 +29,12 @@ COL_START = "green"  # cross at start pos
 COL_GOAL = "tomato"  # cross at goal pos
 
 TIMER = "clock"      # default timer - may be clock or time
-SQRT2 = sqrt(2)
+#SQRT2 = sqrt(2)
+#SQRT2 = 1.4
+SQRT2 = 1.414
 COL = 0
 ROW = 1
+INF = float('inf')
 
 # positions within node
 F_POS = 0   # f val
@@ -52,7 +55,7 @@ def getBlock(topleft,botright):
         for y in range(a2,b2+1):
             L.append((x,y))
     return L
-          
+
 class BadMapException(Exception):
     pass
     

@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2013-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -37,6 +37,8 @@ class Gui(Tkinter.Tk):
         self.simulator = simref  # ref to SimController
         self.lmap = lmap  # ref to LogicalMap
         self.toolmode = None
+        self.keep = False
+        self.show = False
 
         self._buildGui()
 
@@ -164,7 +166,7 @@ class Gui(Tkinter.Tk):
                    "\nbased on the Java application Apparate." + \
                    "\n\nFirst implemented by Peta Masters for her " + \
                    "\nProgramming Project S2, 2013." + \
-                   "\n\nVersion 2.0, 2014"
+                   "\n\nVersion 3.0, 2017"
         self.mBox(aboutmsg)
 
     def help(self):
@@ -174,7 +176,10 @@ class Gui(Tkinter.Tk):
                   + "Drag the slider to zoom the map.\n" \
                   + "Click and drag the map to move it around.\n" \
                   + "Click a cross then the map to reposition a \n" \
-                  + " start or goal marker.\n\n" \
+                  + " start or goal marker.\n" \
+                  + "Click pin to keep current path during 2nd search.\n" \
+                  + "Click Show to display open and closed lists \n" \
+                  + "(if supported by current agent).\n\n" \
                   + "If you open a new map (File Menu), new start \n" \
                   + " and goal positions will be randomly selected.\n" \
                   + "For more extensive changes, modify the config file\n" \
@@ -331,7 +336,33 @@ class Gui(Tkinter.Tk):
             self.toolmode = "S"
             self.btnS.config(relief="ridge")
             self.btnG.config(relief="flat")
-
+            
+    def keepPath(self):
+        """keep currently displayed path"""
+        if self.keep == True:
+            self.keep = False
+            self.btnKeep.config(relief="flat")
+            self.simulator.losePath()
+        else:
+            self.keep = True
+            self.btnKeep.config(relief="ridge")
+            self.simulator.keepPath()
+            
+    def cancelWorkings(self):
+        self.show = False
+        self.btnShow.config(relief="flat")
+     
+    def showWorkings(self):
+        """user wants to see closed/open lists"""
+        if self.show == True:
+            self.show = False
+            self.btnShow.config(relief="flat")
+            self.simulator.hideWorkings()
+        else:
+            self.show = True
+            self.btnShow.config(relief="ridge")
+            self.simulator.showWorkings()        
+            
     #Initialise GUI
     def _buildGui(self):
         """Internal. Called by constructor. Creates interface, inc menus, toolbar,
@@ -395,8 +426,17 @@ class Gui(Tkinter.Tk):
         self.btnG = Tkinter.Button(toolbar, text="X", relief='flat', command=self.goalMode, state=Tkinter.NORMAL, \
                                    background="gray", foreground="tomato")
         self.btnG.pack(side='left', padx=2, pady=2)
+        
+        self.btnKeep = Tkinter.Button(toolbar, text="Keep", relief='flat', command=self.keepPath, state=Tkinter.NORMAL)
+        self.pin = Tkinter.PhotoImage(file="graphics/pin1.gif")
+        self.btnKeep.config(image = self.pin)
+        self.btnKeep.pack(side='left', padx=2, pady=2)
+        
+        self.btnShow = Tkinter.Button(toolbar, text="Show", relief='flat', command=self.showWorkings, state=Tkinter.NORMAL)
+        self.btnShow.pack(side='left', padx=2, pady=2)
+        
         modebar.pack(side="left")
-
+        
         #maparea
         self.mapholder = Tkinter.Frame(self)
         self.mapholder.pack(fill=Tkinter.BOTH, expand=1)

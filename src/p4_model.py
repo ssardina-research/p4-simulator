@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Peta Masters and Sebastian Sardina
+# Copyright (C) 2014-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -18,6 +18,7 @@
 from math import fabs, sqrt 
 from random import randint
 from collections import deque
+import p4_utils as p4
 
 
 class LogicalMap(object):
@@ -29,7 +30,7 @@ class LogicalMap(object):
     def __init__(self, mappath=None, costpath=None):
         """Constructor. Sets default method calls, initialises class attributes,
            calls _readMap()"""
-        self.SQRT2 = sqrt(2)
+        self.SQRT2 = p4.SQRT2
         self.SQRT05 = sqrt(.5)
         self.OCT_CONST = self.SQRT2 - 1
         DEFAULT_HEIGHT = 512
@@ -38,17 +39,12 @@ class LogicalMap(object):
         
         self.cellWithinBoundaries = self.isMapped  # for backward compatibility
 
-        # Default method calls. If getH() is called, by default run euclid(), etc.
-        self.getH = self._euclid
-        self.getAdjacents = self._getDiagAdjacents
-        self.isAdjacent = self._isDiagAdjacent
-        self.getCost = self._getDiagCost
         self.neighbours = []
 
         # terrain types and default costs as per http://movingai.com/benchmarks/formats.html
         # water is untraversable in general, unless coming from water itself (see below)
         self.terrains = {"ground" : "G", "ground1" : ".", "water" : "W", "swamp" : "S", "tree" : "T"}
-        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": float('inf')}
+        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": 1}
                       
         # dictionary to hold precalculated costs for straight and diagonal moves between terrain types
         self.mixedmatrix = {}
@@ -74,6 +70,13 @@ class LogicalMap(object):
             self.costs["."] = 1
             self.mixedmatrix[".",".",True] = self.SQRT2
             self.mixedmatrix[".",".",False] = 1
+            
+        # Default method calls. If getH() is called, by default run _octile(), etc.
+        # n.b. these settings only retained when p4_model is called from free-standing scripts,
+        # that is, outside p4_controller.
+        self.getH = self._octile
+        self.setCostModel()
+        self.setDiagonal()
             
     def _getDiffAdjs(self, coord):
         """returns adjacents with different cost from cell passed in as coord
@@ -108,7 +111,7 @@ class LogicalMap(object):
         to neighbourDic"""
         return filter(self.isPassable, self.neighbourDic[coord])
 
-    def setHeuristic(self, h="euclid"):
+    def setHeuristic(self, h="octile"):
         """Explicitly set method used when getH() is called."""
         if h == "euclid":  
             self.getH = self._euclid
@@ -118,18 +121,46 @@ class LogicalMap(object):
             self.getH = self._manhattan
             
     def setCostModel(self, cm="mixed"):
-        """Sets straight and diagonal multipliers based on whichever cost model is in use."""
-        if cm == "mixed":
-            self.straightmulti = 1
-            self.diagmulti = self.SQRT2
-        elif cm == "mixed_opt1":
-            self.straightmulti = 1
-            self.diagmulti = 1.5
-        elif cm == "mixed_opt2":
-            self.straightmulti = 2
-            self.diagmulti = 3
+        """Sets straight and diagonal multipliers based on whichever cost model is in use.
+        Builds mixedmatrix to check costs from terrain type to terrain type based on cost model. """
+        if cm == "mixed_real":
+            for x in self.costs:
+                for y in self.costs:
+                    # handle water as special case from non-water for uniform cost maps                
+                    if self.uniform and y == "W" and not x == "W":
+                        self.mixedmatrix[x, y, True] = float('inf')
+                        self.mixedmatrix[x, y, False] = float('inf')  
+                    else:
+                        # diagonal moves
+                        self.mixedmatrix[x, y, True] = (self.costs[y] + self.costs[x])/2 * self.SQRT2
+                        # straight moves
+                        self.mixedmatrix[x, y, False] = (self.costs[y] + self.costs[x])/2
         else:
-            self.getCost = self._getRealCost      
+            if cm == "mixed_opt1":
+                self.straightmulti = 1
+                self.diagmulti = 1.5
+            elif cm == "mixed_opt2":
+                self.straightmulti = 2
+                self.diagmulti = 3
+            else:
+                # default: "mixed"
+                self.straightmulti = 1
+                self.diagmulti = self.SQRT2
+            for x in self.costs:
+                for y in self.costs:
+                    # diagonal moves
+                    self.mixedmatrix[x, y, True] = self.costs[y] * self.diagmulti
+                    # straight moves
+                    self.mixedmatrix[x, y, False] = self.costs[y] * self.straightmulti
+                    # handle water as special case from non-water for uniform cost maps                
+                    if self.uniform and y == "W" and not x == "W":
+                        self.mixedmatrix[x, y, True] = float('inf')
+                        self.mixedmatrix[x, y, False] = float('inf')  
+                    else:
+                        # diagonal moves
+                        self.mixedmatrix[x, y, True] = self.costs[y] * self.diagmulti
+                        # straight moves
+                        self.mixedmatrix[x, y, False] = self.costs[y] * self.straightmulti
 
     def setCostCells(self, costCells={}):
         """Sets the cost of cells as per costCells- if missing, leave existing cost """
@@ -137,17 +168,20 @@ class LogicalMap(object):
             abbrev = self.terrains[terrain]
             self.costs[abbrev] = costCells[terrain]
 
-    def setDiagonal(self, d):
-        """Explicitly set methods to be used when getAdjacents() or isAdjacent() called."""
-        if d is None or d:  # default
+    def setDiagonal(self, d = True):
+        """Explicitly set methods to be used when getAdjacents() or isAdjacent() called.
+        Modifies mixedmatrix if diagonals set to False. """
+        if d:  # default
             self.getAdjacents = self._getDiagAdjacents
             self.isAdjacent = self._isDiagAdjacent
-            self.getCost = self._getDiagCost
         else:
             self.getAdjacents = self._getNonDiagAdjacents
             self.isAdjacent = self._isNonDiagAdjacent
-            self.getCost = self._getNonDiagCost
-
+            # if diagonals set to false, all diagonal moves (from any type to any type) are illegal.
+            for x in self.costs:
+                for y in self.costs:
+                    self.mixedmatrix[x, y, True] = float('inf')
+                    
     def getCell(self, (col, row)):
         """Returns character at (col, row) representing type of terrain there. Returns @ (oob) if call fails
         :type col: int
@@ -196,38 +230,9 @@ class LogicalMap(object):
                 return True
         return False      
     
-    def _getDiagCost(self, coord, previous=None, keys=None):
-        """Returns the cost of the terrain type at coord, read from costs dictionary.
-        If previous supplied, return val based on relative locations to prohibit corner-cutting
-        Appropriate multiplier (for straights and diagonals) comes from setCostModel()
+    def getCost(self, coord, previous=None, keys=None):
         """
-        if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
-            return float('inf')
-
-        # get the terrain type for coord
-        coord_type = self.getCell(coord)
-        
-        if previous:
-            # for uniform-cost maps, water is only navigable from other water
-            isDiagonalMove = self.isDiag(previous, coord)
-            if self.uniform and coord_type == "W" and self.getCell(previous) == "W":
-                if isDiagonalMove:
-                    return self.diagmulti * self.costs['G']
-                else:
-                    return self.straightmulti * self.costs['G']
-            if isDiagonalMove:
-                if self.cutsCorner(previous, coord, keys):
-                    return float('inf')
-                else:
-                    return self.diagmulti * self.costs[coord_type]
-            else:
-                return self.straightmulti * self.costs[coord_type]
-        else:
-            return self.costs[coord_type]
-
-    def _getRealCost(self, coord, previous=None, keys=None):
-        """
-        Called as getCost() when mixed-real cost model is selected. Returns the cost of 
+        Called as getCost(). Returns the cost of 
         the terrain type at coord, read from costs dictionary.
         If previous supplied, checks for corner-cutting and provides straight/diagonal 
         cost based on terrain type, read from mixed cost dictionary.
@@ -242,7 +247,7 @@ class LogicalMap(object):
         if previous:
             isDiagonalMove = self.isDiag(previous, coord)
             if isDiagonalMove and self.cutsCorner(previous, coord, keys):
-                    return float('inf')
+                return float('inf')
             else:
                 previous_type = self.getCell(previous)
                 return self.getMixedCost(previous_type, coord_type, isDiagonalMove)
@@ -260,21 +265,6 @@ class LogicalMap(object):
         else:
             return True
             
-    def _getNonDiagCost(self, coord, previous=None, keys=None):
-        #TODO: is this correct? what about water-to-water for uniform grids?
-        """
-        Returns the cost of the terrain type at coord, read from costs dictionary.
-        :type previous: (int,int)
-        :type coord: (int,int)
-        :param coord: The coordinates
-        :param previous:  The previous coordinates. If previous supplied, calc based on relative locations
-        :rtype : float
-        TODO - bring this into line with new _getDiagCost!!!!!!!!!!!!!! - i.e.4 x cost models, etc.
-        """
-        if previous and self.isDiag(previous, coord):
-            return float('inf')
-        else:
-            return self.costs[self.getCell(coord)]
             
     @property
     def height(self):
@@ -502,20 +492,6 @@ class LogicalMap(object):
                     self.uniform = True
                 else:
                     self.uniform = False
-
-            # now we have everything, build mixedmatrix
-            #TODO: fix this to respect the input cost model
-            for x in self.costs:
-                for y in self.costs:
-                    # handle water from non-water for uniform cost maps
-                    if self.uniform and y == "W" and not x == "W":
-                        self.mixedmatrix[x, y, True] = float('inf')
-                        self.mixedmatrix[x, y, False] = float('inf')
-                    else:
-                        # diagonal moves
-                        self.mixedmatrix[x, y, True] = (self.costs[y]) * self.SQRT2
-                        # straight moves
-                        self.mixedmatrix[x, y, False] = self.costs[y]
 
         except EnvironmentError:
             print("Error parsing map file")

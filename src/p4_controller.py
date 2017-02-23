@@ -1,4 +1,4 @@
-# Copyright (C) 2015 Peta Masters and Sebastian Sardina
+# Copyright (C) 2013-17 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-# 20/4/15: modified for dynamic changes
-# 9/5/15:  modified to support preprocessing
-
 import os
 import imp
 import signal
@@ -26,17 +23,15 @@ import p4_utils as p4  # sets constants
 import importlib
 import traceback
 import csv
+import copy
 
-# NOTE: info output has been commented out - cannot output to CLI during
-# automated testing - expected return values are csv results only.
-# If output required, add after settings have been loaded
-# so can check automated testing not in progress (as elsewhere).
+
 if p4.TIMER == "time":
     from time import time as timer
-    # print("using other timer")
+    print("using other timer")
 else:
     from time import clock as timer
-    # print("using internal timer")
+    print("using internal timer")
 
 # For speed, rather than if/else statements at runtime, load
 # whichever class is appropriate to os but call them by same alias.
@@ -66,8 +61,7 @@ class SimController(object):
         :type cfgfile: string
         :type args: dict[string,object]
         """
-        if args.get("AUTO") is False:
-            print("Initialising SimController")
+        print("Initialising SimController")
         # set defaults
         self.lmap = None    # Ref to LogicalMap object
         self.gui = None     # Ref to Gui object
@@ -79,6 +73,7 @@ class SimController(object):
         self.timeout = float('inf')
 
         self.path = set()  # set of all coordinates displayed as part of path
+        self.keptpath = None
         self.fullsearchflag = False  # set to True if map is populated with extra coords
         self.coordsets = None  # sets of coordinates that will need to be reset
 
@@ -86,7 +81,7 @@ class SimController(object):
         self.gotscript = False
         self.script = {}  # Allows for dynamic changes
         
-        #we distinguish 3 modes - config file, CLI or auto (i.e. CLI but on a loop).
+        #we distinguish 3 modes - config file, CLI or batch
         if cfgfile is not None:
             self.readConfig()
             self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
@@ -133,15 +128,13 @@ class SimController(object):
             mappath = os.path.join("..", "maps", self.cfg["MAP_FILE"])
             if not os.path.exists(mappath):
                 mappath = None
-                if not self.cfg["AUTO"]:
-                    print "Map file not found: loading default."
+                print "Map file not found: loading default."
                 self.cfg["MAP_FILE"]=None
 
             # if cost file exists, get file 
             costpath = None
             if self.cfg["COST_FILE"] and os.path.exists(self.cfg["COST_FILE"]):
                 costpath = os.path.join(self.cfg["COST_FILE"])
-
             # create logical map object
             self.lmap = LogicalMap(mappath, costpath)
         except:
@@ -151,21 +144,19 @@ class SimController(object):
         self.cfg["DEADLINE"] = float(self.cfg.get("DEADLINE"))
         self.cfg["FREE_TIME"] = float(self.cfg.get("FREE_TIME"))
         # pass preferences to lmap
-        self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
-        self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
         self.lmap.setCostModel(self.cfg.get("COST_MODEL"))
+        self.lmap.setDiagonal(self.cfg.get("DIAGONAL"))
+        self.lmap.setHeuristic(self.cfg.get("HEURISTIC"))
 
         if self.cfg["PREPROCESS"]:
             try:
                 self.agent.preprocess(self.lmap)
             except AttributeError:
-                if self.cfg["AUTO"] is False:
-                    print("Agent doesn't support preprocessing.")
+                print("Agent doesn't support preprocessing.")
             except:
                 # some other problem
-                if self.cfg["AUTO"] is False:
-                    print("Preprocessing failed.")
-                    print(traceback.format_exc())
+                print("Preprocessing failed.")
+                print(traceback.format_exc())
                 
         
     def initAgent(self):
@@ -195,24 +186,23 @@ class SimController(object):
         """
         filename = self.cfg.get("CFG_FILE")
             
-        if self.cfg.get("AUTO") is False:
-            print("Reading " + filename)
+        print("Reading " + filename)
         try:
             # track previous MAP_FILE setting - map only needs to be redrawn if it's changed
             oldmap = self.cfg.get("MAP_FILE")   #may be None
             execfile(filename, self.cfg)
             
-            if self.cfg.get("AUTO") is False:
-                #display setings
-                print "\n"
-                for a,b in self.cfg.iteritems():
-                    #exclude unprintables
-                    if a is not "__builtins__" and a is not "MAPREF":
-                        print str(a) + ":" + str(b) + " ",
-                print "\n"
+            #display setings
+            print "\n"
+            for a,b in self.cfg.iteritems():
+                #exclude unprintables
+                if a is not "__builtins__" and a is not "MAPREF":
+                    print str(a) + ":" + str(b) + " ",
+            print "\n"
 
             self.initAgent()                
             self.processMap()
+            print "processing prefs"
             self.processPrefs()
             self.setStart(self.cfg.get("START"))
             self.setGoal(self.cfg.get("GOAL"))
@@ -295,7 +285,7 @@ class SimController(object):
         return self.hdlStop()
     
     
-    # just kep the first argument of a nextstep, and drop any possible argument for drawing lists
+    # just keep the first argument of a nextstep, and drop any possible argument for drawing lists
     def _get_coordinate(self, nextstep):
             # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
             if isinstance(nextstep[1], (list, tuple)):
@@ -304,7 +294,7 @@ class SimController(object):
                 return nextstep
 
 
-    # just kep the second argument of a nextstep (the list for drawings), and drop the coordinate
+    # just keep the second argument of a nextstep (the list for drawings), and drop the coordinate
     def _get_drawing_lists(self, nextstep):
             # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
             # is the second part of nextstep (list1,list2,list3)? If so, just keep the coordinate argument
@@ -312,7 +302,48 @@ class SimController(object):
                 return nextstep[1]
             else:
                 return None
+                
+    def keepPath(self):
+        #Pins current path to map
+        self.keptpath =copy.deepcopy(self.path)
+        self.gui.vmap.drawSet(self.keptpath, "orange") 
+        
+    def losePath(self):
+        self.gui.vmap.clear(self.keptpath, self.lmap)
+        self.gui.vmap.drawSet(self.path, "blue") 
+        self.keptpath = None
     
+    def showWorkings(self):
+        #Used by gets drawing lists, if getWorkings() is supported by agent
+        try:
+            coordsets = self.agent.getWorkings()
+        except:
+            self.updateStatus("No working sets available.",False)
+        else:
+            for coordset in coordsets:
+                if coordset[1] == 'reset':
+                    self.gui.vmap.clear(coordset[0], self.lmap)
+                else:
+                    self.gui.vmap.drawSet(coordset[0], coordset[1])
+            #redraw start and goal on top
+            self.gui.setStart(self.cfg["START"])
+            self.gui.setGoal(self.cfg["GOAL"])
+            self.coordsets = coordsets
+            self.fullsearchflag = True
+        
+    def hideWorkings(self):
+        if self.fullsearchflag:
+            for (a, b) in self.coordsets:
+                took_action = True
+                self.gui.vmap.clear(a, self.lmap)
+            if self.keptpath:
+                self.gui.vmap.drawSet(self.keptpath, "orange") 
+            self.gui.vmap.drawSet(self.path, "blue") 
+            self.gui.setStart(self.cfg["START"])
+            self.gui.setGoal(self.cfg["GOAL"])
+            self.gui.cancelWorkings()
+        self.fullsearchflag = False
+            
     def stepGenerator(self, current, target):
         """
         Generator referenced by self.gen
@@ -359,8 +390,8 @@ class SimController(object):
             except:
                 raise p4.BadAgentException()
                
-            # If the step involved no reasoning (took less than FREE_TIME) do not count its time
-            if ((clockend - clockstart) < self.cfg.get("FREE_TIME")):
+            # Only time first step unless operating in 'realtime' mode. If this is realtime, and the step involved no reasoning (took less than FREE_TIME) do not count its time
+            if ((not self.cfg.get("REALTIME") and self.pathtime) or ((clockend - clockstart) < self.cfg.get("FREE_TIME"))):
                 steptime = 0
             else:
                 steptime = (clockend - clockstart)
@@ -424,7 +455,9 @@ class SimController(object):
 
         self.gui.setStart(self.cfg["START"])
         self.gui.setGoal(self.cfg["GOAL"])
-
+        if self.keptpath:
+            self.gui.vmap.drawSet(self.keptpath, "orange") 
+        self.gui.cancelWorkings()
         self.updateStatus(msg)
         self.updateStatus("", False)  # clears statusbar R
 
@@ -434,18 +467,11 @@ class SimController(object):
             totalcost = str(self.pathcost)
         else:
             totalcost = '{0:.4f}'.format(self.pathcost)
-        if self.cfg.get("AUTO"):
-            message = (totalcost + ";" + \
-                str(self.pathsteps) + ";" + \
-                str(self.pathtime) + ";" + str(self.timeremaining))
-            
-            return message
 
-        else:
-            message = "Total Cost : " + totalcost + \
-                      " | Total Steps : " + str(self.pathsteps) + \
-                      " | Time Remaining : " + str(self.timeremaining) + \
-                      " | Total Time : " + str(self.pathtime)
+        message = "Total Cost : " + totalcost + \
+                  " | Total Steps : " + str(self.pathsteps) + \
+                  " | Time Remaining : " + str(self.timeremaining) + \
+                  " | Total Time : " + str(self.pathtime)
 
         self.updateStatus(message)
 
@@ -476,7 +502,7 @@ class SimController(object):
             except:
                 self.updateStatus("Agent returned " + str(nextreturn), False)
                 self.hdlStop()
-            else:
+            else:   #try/except/else...
                 # does nextreturn include a list of coordinates to draw?
                 if isinstance(nextreturn[1], (list, tuple)):
                     nextstep, coordsets  = nextreturn
@@ -489,7 +515,7 @@ class SimController(object):
                     self.gui.setGoal(self.cfg["GOAL"])
                     self.fullsearchflag = True
                     self.coordsets = coordsets
-                    #self.updateStatus("Plotting path...", False)
+                    self.updateStatus("Plotting path...", False)
                 else:
                     # nextreturn just includes the next coordinate, no drawing data
                     nextstep = nextreturn
@@ -510,7 +536,7 @@ class SimController(object):
                         str(self.timeremaining)
                 self.updateStatus(message)
                 sleep(self.cfg.get("SPEED"))  # delay, if any
-                    
+                
 
     # MENU HANDLERS
     def loadMap(self, mapfile):
@@ -556,8 +582,8 @@ class SimController(object):
             self.gui.clearStart()
             self.gui.setStart(self.cfg["START"])
             self.updateStatus("Start moved to " + str(self.cfg["START"]))
-            #TODO if search not in progress, reset generator.
-            #self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+            #TODO check search not in progress before resetting generator.
+            self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
 
     def setGoal(self, goal=None):
         """Menu handler: Search - Reset Goal"""
@@ -616,8 +642,7 @@ class SimController(object):
                 self.gui.setStatusR(msg)
         else:
             # no gui - print to terminal
-            if not self.cfg.get("AUTO"):
-                print(msg)
+            print(msg)
 
     def loadScript(self):
         try:
@@ -672,6 +697,7 @@ class SimController(object):
                         output = self.search()
                         actual_cost, steps, time, inf = str.split(output, ';')
                         times.append(float(time))
+                        actual_cost = round(float(actual_cost),2)   #to compare with movingai costs
                     except:
                         pass
                 if len(times) > 0:
