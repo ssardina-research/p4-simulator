@@ -1,12 +1,16 @@
-"""
-GR is hard-coded to run a batch from a modified scen file. 
-It uses weighted A* to generate 3 sets of observations and from 
-each of those creates 6 problems to solve 
-- one with each of 3 densities delivered 
-as a continuous path prefix or a randomised sequence.
-"""
-#############################
-#Settings
+import p4_utils as p4
+import csv, os, imp, random
+from p4_model import LogicalMap
+from time import clock as timer
+from random import randint
+
+if os.name == 'posix':
+    # from time import time as timer
+    from p4_utils import Timeout
+else:
+    # from time import clock as timer
+    from p4_utils import WinTimeout as Timeout
+
 COMPLEX = 0
 SIMPLE = 1
 MINIMAL = 2
@@ -23,26 +27,15 @@ PREFIX = 0
 RANDOM = 1
 
 OBS_AGENT = "agent_wa"
-GR_AGENT = "gr_agent_ramirez"
-HELPER_AGENT = "helper"
+#OBS_AGENT = "agent_rta"
+#GR_AGENT = "gr_agent_ramirez"
+GR_AGENT = "gr_standalone"
 
 MAP_PATH = "../maps/gr/"
-AGENT_PATH = "./agents/"
 MAX_GOALS = 7
-TIME_OUT = 180  #seconds
-#############################
+TIME_OUT = 180  #3 minutes
 
-import csv, os, imp, random
-from p4_model import LogicalMap
-from time import clock as timer
-from random import randint
-
-#timeout only implemented for Unix - WinTimeout is a dummy function
-if os.name == 'posix':
-    from p4_utils import Timeout
-else:
-    from p4_utils import WinTimeout as Timeout
-
+"""GR is hard-coded to run a batch from a modified scen file. It uses weighted A* to generate 3 sets of observations and from each of those creates 6 problems to solve - one with each of 20%, 40%, 60% obs delivered as a continuous path prefix or a randomised sequence."""
 class GR(object):
     def __init__(self, prob_file, sol_file = None):
         self.infile = prob_file
@@ -51,16 +44,13 @@ class GR(object):
         else:
             self.outfile = self.infile + ".csv"
             
-        #initialise agents            
+        #initialise agents    
         try:
-            temp = imp.load_source(OBS_AGENT, AGENT_PATH+OBS_AGENT+'.py')
+            temp = imp.load_source(OBS_AGENT, './agents/'+OBS_AGENT+'.py')
             self.obs_agent = temp.Agent()
-
-            temp = imp.load_source(GR_AGENT, AGENT_PATH+GR_AGENT+'.py')
+            temp = imp.load_source(GR_AGENT, './agents/'+GR_AGENT+'.py')
             self.gr_agent = temp.GrAgent()
 
-            temp = imp.load_source(HELPER_AGENT, AGENT_PATH+HELPER_AGENT+'.py')
-            self.gr_agent.setHelper(temp.Agent())
         except Exception, e:
             print "Expecting agent name only. "
             self.fatalError(e)
@@ -68,17 +58,17 @@ class GR(object):
         self.map = None
         print "Initialised GR."
                     
-    def runBatch(self):
+    def runBatch(self, quality, density, distribution):
         """
         Read problems, generate observed path and run getProbabities()
         Requires agents to exist
         """
         print "Running batch..."
-        
         qualities = (OPTIMAL, SUBOPTIMAL, GREEDY)
         densities = (SPARSE, MEDIUM, DENSE)
         obs_sets = (self.prefix, self.random)
-        formulas = (COMPLEX, SIMPLE, MINIMAL)       
+        #edit directly to restrict to one formula only
+        formulas = (COMPLEX, SIMPLE, MINIMAL)
         
         with open(self.infile, 'r') as f:
             reader = csv.reader(f)
@@ -97,53 +87,49 @@ class GR(object):
                 #parse extra goals
                 for i in range(numgoals):
                     goals.append(GoalObj('goal'+str(i+1), problem_ints[5+i*2], problem_ints[6+i*2]))
-
                 realgoal = 0
                 
                 if not self.map == map:
                     self.model = LogicalMap(MAP_PATH + map)
+                    # self.model.setDiagonal(False)   #
                     self.map = map
                                   
-                #one loop to generate paths, extract obs, get probabilities, and write to csv
-                for quality in qualities:
-                    fullpath = self.getFullPath(start, goals[0].coord, quality)
-                    for density in densities:
-                        distribution = -1       #initialise counter so increments to 0
-                        for obs_set in obs_sets:
-                            distribution = distribution + 1
-                            print "QDD", str(quality), str(density), str(distribution)
-                            obs = obs_set(fullpath, density)
-                            goalset = []
-                            for formula in formulas:
-                                self.gr_agent.setCostDif(formula)
-                                try:
-                                    with Timeout(TIME_OUT):
-                                        clockstart = timer()  
-                                        goal_results = self.gr_agent.getProbs(self.model, start, goals, obs)  #populate goals
-                                        clockend = timer() 
-                                except Timeout.Timeout:
-                                    print "Timeout error"
-                                    goal_results = goals    
-                                    clockend = clockstart + TIME_OUT
-                                    for goal in goal_results:
-                                        goal.setTime("TIMED OUT")
-   
-
-                                writearray = [map, start, optcost, "Q_"+str(quality), "D_"+str(density), ("P","R")[distribution], str(numgoals+1), formula]
-                                count = 0
-                                for goal in goal_results:
-                                    count = count + 1
-                                    writearray.extend(goal.getData())
-                                for i in range(MAX_GOALS - count):  #align columns
-                                    writearray.extend(["","","",""])
-                                writearray.append(clockend-clockstart)
-                                self.outputLine(self.outfile, writearray, goals)                                 
+                #generate paths, get probabilities * 6 and write to csv
+                #for quality in qualities:
+                fullpath = self.getFullPath(start, goals[realgoal].coord, quality)
+                obs_set = obs_sets[distribution]
+                obs = obs_set(fullpath, density)
+                print numgoals + 1, len(goals)
+                for formula in formulas:
+                    print "formula " + str(formula) + ":"
+                    #self.gr_agent.reset()
+                    self.gr_agent.setCostDif(formula)
+                    try:
+                        with Timeout(TIME_OUT):
+                            clockstart = timer()  # start timer - getting results for all 3 goals
+                            goal_results = self.gr_agent.getProbs(self.model, start, goals, obs)  #populate goals
+                            clockend = timer()  # start timer - getting results for all 3 goals
+                    except Timeout.Timeout:
+                        print "Timeout error"
+                        goal_results = goals    
+                        clockend = clockstart + 180
+                        for goal in goal_results:
+                            goal.setTime("TIMED OUT")
+                    writearray = [map, start, optcost, "Q_"+str(quality), "D_"+str(density), ("P","R")[distribution], formula]
+                    count = 0
+                    print numgoals + 1, len(goal_results)
+                    for goal in goal_results:
+                        count = count + 1
+                        writearray.extend(goal.getData())
+                    for i in range(MAX_GOALS - count):  #align columns
+                        writearray.extend(["","","",""])
+                    writearray.append(clockend-clockstart)
+                    self.outputLine(self.outfile, writearray, goals)                                 
                  
         print "Results written to " + self.outfile
                  
     def getFullPath(self, start, goal, weight):
         self.obs_agent.reset()
-        #might use agent other than weighted A*
         try:
             self.obs_agent.setWeight(weight)
         except:
@@ -152,9 +138,8 @@ class GR(object):
    
     def outputLine(self, outfile, writearray, goals):   
         try:
-            #First time, write headings
             if not os.path.isfile(outfile):        
-                headerlist = ["map", "start", "optcost", "quality", "density", "distribution", "#goals", "formula"]
+                headerlist = ["map", "start", "optcost", "quality", "density", "distribution", "formula"]
                 for counter in range(MAX_GOALS):
                     headerlist.extend(["goal"+ str(counter), "costdif", "probability", "calctime"])
                 headerlist.append("total_time")
@@ -169,7 +154,6 @@ class GR(object):
             self.fatalError(e)
             
     def random(self, path, percent):
-        #extract randomised sequence
         total_obs = len(path)
         num_obs = total_obs * percent / 100
         not_less_than = 1               #skip start
@@ -198,11 +182,22 @@ class GoalObj(object):
         self.costdif = None
         self.p = None
         self.t = None
+        self.target = False
+    def setProb(self, prob):
+        self.p = prob
+    def setTime(self, timing):
+        self.t = timing
     def getData(self):
         return [(self.coord[0], self.coord[1]), self.costdif, self.p, self.t]
-
-
+    def setTarget(self, target):
+        self.target = target
+    def isTarget(self):
+        return target
+        
 if __name__ == '__main__':
-    recog = GR( "../maps/gr/sample.GR", "sample.csv")
-    recog.runBatch()
+    #Obs_percent, obs_agent, kwargs, gr_agent, kwargs, helper_agent, gr_problem_scenarios
+    #recog = GR( "../maps/gr/landscapes.GR", "../maps/gr/landscapes_osr.csv")
+    #OPTIMAL/SUBOPTIMAL/GREEDY, SPARSE/MEDIUM/DENSE, RANDOM/PREFIX
 
+    recog = GR( "../maps/gr/special.GR", "../maps/gr/special1.csv")
+    recog.runBatch(OPTIMAL, SPARSE, PREFIX)
