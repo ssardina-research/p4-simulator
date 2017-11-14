@@ -3,32 +3,38 @@ import  p4_utils as p4               #contains colours and constants
 from time import clock as timer
 import math
 INF = float('inf')
-PRECISION = 800 #large constant used with minimal formula to preserve precision
+PRECISION = 800 #large constant used with minimal_2 to preserve precision
 
 class GrAgent(object):
     opt_costs = {}  #dictionary by coord, stores opt_cost from start to goal coord
     
     def __init__(self, **kwargs):
-        #Formula 0 = complex, 1 = simple, 2 = minimal
+        #Formula 0 = complex, 1 = simple, 2 = minimal_1, 3 = minimal_2
         if kwargs:
             formula = kwargs['formula']
-            self.costdif = (self.cd_complex, self.cd_simple, self.cd_minimal)[formula]
+            self.costdif = (self.cd_complex, self.cd_simple, self.cd_minimal_1, self.cd_minimal_2)[formula]
         self.model = None
-        self.helper = None
         self.start = None
         
     def setCostDif(self, index):
-        self.costdif = (self.cd_complex, self.cd_simple, self.cd_minimal)[index]
+        self.costdif = (self.cd_complex, self.cd_simple, self.cd_minimal_1, self.cd_minimal_2)[index]
     
     def reset(self):
-        GrAgent.opt_costs.clear()
         self.helper = Helper()
         self.helper.reset()
+        GrAgent.opt_costs.clear()
+        
+    def setNewOptcost(self,start,goal):
+        print "setting new optcost"
+        optc_sg = self.getOptcSG(start, goal)
+        GrAgent.opt_costs[goal] = optc_sg
 
     def getProbs(self, model, start, goals, obs):
         self.model = model
         if not start == self.start:
+            print start, self.start
             self.reset()
+            self.start=start
         for goal in goals:
             clockstart = timer()  # start timer
             #print "Getting costdif...",
@@ -59,24 +65,43 @@ class GrAgent(object):
         optc_sog = self.getOptcSOG(start, goal, obs)
         optcNot_sog = self.helper.getCostNobs(self.model, start, goal, obs)
         costdif = optc_sog - optcNot_sog
-        return costdif
+        return round(costdif,5)
         
     def cd_simple(self, start, goal, obs):
         #calculate and return costdif based on simple formula
+        try:
+            optc_sg = GrAgent.opt_costs[goal]
+        except:
+            self.setNewOptcost(start, goal)
+            optc_sg = GrAgent.opt_costs[goal]
         optc_sog = self.getOptcSOG(start, goal, obs)
-        optc_sg = self.getOptcSG(start, goal)
         costdif = optc_sog - optc_sg
-        return costdif
+        return round(costdif,5)
                
-    def cd_minimal(self, start, goal, obs):
+    def cd_minimal_1(self, start, goal, obs):
         #calculate and return costdif based on minimal formula
-        optc_sg = self.getOptcSG(start, goal)
+        try:
+            optc_sg = GrAgent.opt_costs[goal]
+        except:
+            self.setNewOptcost(start,goal)
+            optc_sg = GrAgent.opt_costs[goal]
+        optc_ng = round(self.helper.getCost(self.model, obs[len(obs)-1], goal), 5)
+        costdif = optc_ng - optc_sg
+        return round(costdif,5)  
+        
+    def cd_minimal_2(self, start, goal, obs):
+        #calculate and return costdif based on minimal formula2
+        try:
+            optc_sg = GrAgent.opt_costs[goal]
+        except:
+            self.setNewOptcost(start,goal)
+            optc_sg = GrAgent.opt_costs[goal]
         optc_ng = round(self.helper.getCost(self.model, obs[len(obs)-1], goal), 5)
         costdif = optc_ng - optc_sg
         return round(costdif + PRECISION,5)  
         
     def getOptcSOG(self, start, goal, obs):
-        #calulate and return cost from start to goal through observations
+        #calculate and return cost from start to goal through observations
         optc_so = self.helper.getCost(self.model, start, obs[0])
         cost_o = 0
         for i in range(len(obs)-1):
