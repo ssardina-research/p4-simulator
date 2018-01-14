@@ -26,7 +26,6 @@ import csv
 import copy
 import logging
 
-
 if p4.TIMER == "time":
     from time import time as timer
 
@@ -94,7 +93,8 @@ class SimController(object):
                 logging.info("\nBatch process completed. Results written to " + self.cfg["BATCH"][1] + ".\n")
             except Exception as e:
                 logging.warning(
-                    "\nAn error has occurred. Batch results may be incomplete. Here is the exception: \n {}".format(e))
+                    "\nAn error has occurred. Batch results may be incomplete. l"
+                    " the exception: \n {}".format(e))
             finally:
                 raise SystemExit()
         else:
@@ -263,7 +263,7 @@ class SimController(object):
 
     def search(self):
         """Performs command line search by calls to generator """
-        self.updateStatus("Searching...")
+        self.updateStatus("Executing simulation...")
         nextstep = self.cfg["START"]
 
         # keep generating next steps as long as goal not in goal & enough time
@@ -283,8 +283,7 @@ class SimController(object):
                 logging.error("Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
                 break
-
-        return self.hdlStop()
+        return self.hdlStop()  # (totalcost, pathsteps, timeremaining, pathtime)
 
     # just keep the first argument of a nextstep, and drop any possible argument for drawing lists
     def _get_coordinate(self, nextstep):
@@ -475,6 +474,7 @@ class SimController(object):
                   " | Total Time : " + str(self.pathtime)
 
         self.updateStatus(message)
+        return (totalcost, self.pathsteps, self.timeremaining, self.pathtime)
 
     def hdlStep(self):
         """Button handler. Performs one step for GUI Step or Search.
@@ -640,6 +640,7 @@ class SimController(object):
                 self.gui.setStatusR(msg)
         else:
             # no gui - print to terminal
+            # print(msg)
             logging.info("STATUS REPORTING (no GUI): {}".format(msg))
 
     def loadScript(self):
@@ -658,7 +659,7 @@ class SimController(object):
         # assumes MAP_FILE, AGENT_FILE set in self.cfg
         # initialise map and agent
         logging.info("\nRunning batch...")
-        times = []
+        times_taken = []
         reps = int(reps)
         self.processMap()
         self.initAgent()
@@ -680,38 +681,44 @@ class SimController(object):
             fcsv = csv.writer(csvfile, delimiter=',',
                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
             count = 0
+            # for each problem
             for problem in problems:
                 count += 1
                 skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
                 logging.info(
-                    "\n ========> Running problem {}: from ({},{}) to ({},{}) - Optimal: {}".format(count, scol, srow,
+                    "========> Running problem {}: from ({},{}) to ({},{}) - Optimal: {}".format(count, scol, srow,
                                                                                                     gcol, grow,
                                                                                                     optimum))
                 pathname, map = os.path.split(mappath)
                 self.cfg["START"] = (int(scol), int(srow))
                 self.cfg["GOAL"] = (int(gcol), int(grow))
 
-                times = []
+                times_taken = []
+                steps_taken = []
+                costs_taken = []
+                # run the number of repetitions specified (on the same problem)
                 for i in xrange(reps):
                     try:
                         self.agent.reset()
                         self.resetVars()
-                        output = self.search()
-                        actual_cost, steps, time, inf = str.split(output, ';')
-                        times.append(float(time))
-                        actual_cost = round(float(actual_cost), 2)  # to compare with movingai costs
+                        total_cost, total_steps, time_left, time_taken = self.search()
+                        times_taken.append(float(time_taken))
+                        steps_taken.append(total_steps)
+                        costs_taken.append(float(total_cost))
                     except:
                         pass
-                if len(times) > 0:
-                    time = sum(times) / reps  # calculate average
 
-                    try:
-                        quality = float(optimum) / float(actual_cost)
-                    except ZeroDivisionError:
-                        quality = 0
-                    fcsv.writerow(
-                        [self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, actual_cost, steps,
-                         time, quality])
+                time_taken = round(sum(times_taken) / reps, 5)  # calculate average
+                total_steps = sum(steps_taken) / reps  # calculate average
+                total_cost = sum(costs_taken) / reps  # calculate average -  precision to compare with movingai costs
+
+                try:
+                    quality = round(float(optimum) / float(total_cost), 2)
+                except ZeroDivisionError:
+                    quality = 0
+                fcsv.writerow(
+                    [self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, total_cost,
+                     total_steps, time_taken, quality])
 
 
 if __name__ == '__main__':

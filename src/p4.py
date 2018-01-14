@@ -85,12 +85,12 @@ if args.BATCH is not None:
         except AttributeError:
             args.MAP_FILE = ''
         logging.info(args.MAP_FILE)
-        logging.info("Map to be used for batch run: " + args.MAP_FILE)
-        if args.COST_FILE:
-            print("Cost file to be used for batch run: " + args.COST_FILE)
-        logging.info("Agent to be used for batch run: " + args.AGENT_FILE)
+        logging.info("BATCH mode to be run in map {} (cost file: {}) with agent {}".format(args.MAP_FILE, args.COST_FILE,
+                                                                                           args.AGENT_FILE))
 
-# If map file named available (command line or batch mode), take it. Otherwise, use one in config file
+
+
+    # If map file named available (command line or batch mode), take it. Otherwise, use one in config file
 if args.MAP_FILE is not None:
     # If map file is named but does not exist, raise exception and terminate
     dirname = os.path.dirname(args.MAP_FILE)
