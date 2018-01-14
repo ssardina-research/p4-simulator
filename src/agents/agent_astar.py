@@ -47,7 +47,7 @@ class Agent(object):
            On first entry, calls planpath to do a full search and stores the path,
            thereafter yields the next step in the path.
         """
-        print("Planning in progress....")
+        # print("Planning in progress....")
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
         reverse_path = list(reversed(self.path[:len(self.path)-1]))
         
