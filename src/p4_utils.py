@@ -18,6 +18,15 @@
 import signal
 import os
 from math import sqrt
+import logging
+
+# logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG, datefmt='%a, %d %b %Y %H:%M:%S')
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO,
+                    datefmt='%a, %d %b %Y %H:%M:%S')
+
+
+# Version of P4
+VERSION = "3.5.0"
 
 # P4 CONSTANTS
 COL_OL = "red"       # open list
