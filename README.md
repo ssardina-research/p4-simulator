@@ -22,7 +22,7 @@ The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) forma
 * Dynamic changes to map via map scripts (see below).
 * Deadline specification (agent is terminated at deadline).
 * Report of cost, steps, total and remaining time.
-* Automatic mode `-auto` for running group of scenarios (`.scen` format) and exporting stats to `csv` file.
+* Batch mode `-batch` for running group of scenarios (`.scen` format) and exporting stats to `csv` file.
 * Different cost models: mixed, mixed-real, mixed-opt2.
 
 
