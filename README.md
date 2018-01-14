@@ -13,6 +13,12 @@ and output is delivered in csv format.
 -----------------------
 [TOC]
 
+## Prerequisites
+
+* Python 2.7
+* python-tk - Tkinter - Writing Tk applications with Python
+
+
 ## Director Structure
 
 Supplied Files include:
