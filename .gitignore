@@ -35,9 +35,15 @@ tmp*
 *.spl
 *.thm
 *.pdfsync
-pdfs/*
 *.dpth
+*.cb
+*.cb2
+*.soc
+
+pdfs/*
+src/*.pdf
 main-*.pdf
+
 
 # Standard VS.NET and ReSharper Foo
 obj
@@ -95,12 +101,11 @@ deploy/*
 # Visual Basic 6 excludes
 *.vbw
 
-# Binaries
+# C binary
 *.o
-*.out
-*.clas
-*.pyc
 
+#java specific
+*.class
 
 #netbeans ignore personal stuff 
 nbproject/private/
@@ -110,6 +115,7 @@ nbproject/private/
 *.lock
 *.DS_Store
 *.swp
+*.out
 *.~lock*
 
 # Jack jar files
@@ -119,19 +125,161 @@ jackagt.jar
 # git original files after merge
 *.orig
 
-# examples for ignoring pdf files in various subdirs (uncomment as required)
-#/*.pdf
-#2013/*.pdf
-#AI13-overview.pdf
-
 *.table
 *.script
 *.gnuplot
 *.auxlock
 
-.idea
-*.csv
-*.7z
-*.profileagent_astar.py
-src/agents/
-src/run-student.sh
+.dropbox
+
+#####################################################
+# Created by https://www.gitignore.io/api/intellij
+#####################################################
+
+### Intellij ###
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff:
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/dictionaries
+
+# Sensitive or high-churn files:
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.xml
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+
+# Gradle:
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# CMake
+cmake-build-debug/
+
+# Mongo Explorer plugin:
+.idea/**/mongoSettings.xml
+
+## File-based project format:
+*.iws
+
+## Plugin-specific files:
+
+# IntelliJ
+/out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# Ruby plugin and RubyMine
+/.rakeTasks
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+### Intellij Patch ###
+# Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
+
+# *.iml
+# modules.xml
+# .idea/misc.xml
+# *.ipr
+
+# Sonarlint plugin
+.idea/sonarlint
+
+#####################################################
+# End of https://www.gitignore.io/api/intellij
+#####################################################
+
+
+
+
+#####################################################
+# Created by https://www.gitignore.io/api/pycharm
+#####################################################
+
+### PyCharm ###
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff:
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/dictionaries
+
+# Sensitive or high-churn files:
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.xml
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+
+# Gradle:
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# CMake
+cmake-build-debug/
+
+# Mongo Explorer plugin:
+.idea/**/mongoSettings.xml
+
+## File-based project format:
+*.iws
+
+## Plugin-specific files:
+
+# IntelliJ
+/out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# Ruby plugin and RubyMine
+/.rakeTasks
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+### PyCharm Patch ###
+# Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
+
+# *.iml
+# modules.xml
+# .idea/misc.xml
+# *.ipr
+
+# Sonarlint plugin
+.idea/sonarlint
+
+
+#####################################################
+# End of https://www.gitignore.io/api/pycharm
+#####################################################
+
+*-extras

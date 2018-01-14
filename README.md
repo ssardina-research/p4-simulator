@@ -1,14 +1,10 @@
 # p4 - Python Path Planning Project
 
-p4 (aka the "Python Path Planning Project") began as a Python 2.7 implementation of the Apparate path-planning simulator. It has been developed
-and extended to support my Honours thesis and doctorate under the guidance of Sebastian Sardina.
 
-Use p4 to run search algorithms on maps presented in movingai format (see www.movingai.com). Run with GUI, to observe their operation, without GUI to
-obtain cost, steps and time-taken, or in auto mode to output csv files of results for accumulated results from map problems in .scen format (also
-from movingai).
+[p4 (aka the "Python Path Planning Project")](https://bitbucket.org/ssardina/soft-p4-sim-core) is a Python-based path planning framework and simulator, useful to prototype, evaluate, and benchmark path planning algoritms. The system began as a Python version of the Java-based [APPARATE path-planning simulator](https://bitbucket.org/ssardina-research/apparate-simulator) to be able to prototype algorithms in a "lighter" programming language. It started as part of Peta Master's 2013 programming course project and then extended to support her Honours thesis and doctorate program, under the supervision of Sebastian Sardina.
 
-p4 can be run from the command line or from within a wrapper script. In automatic mode, all info statements to the command line are supressed 
-and output is delivered in csv format. 
+The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) format. Run with GUI, to observe their operation, without GUI to obtain cost, steps and time-taken, or in auto mode to output `csv` files of accumulated results from map problems in `.scen` format (also from Movingai).
+
 
 -----------------------
 [TOC]
@@ -17,6 +13,17 @@ and output is delivered in csv format.
 
 * Python 2.7
 * python-tk - Tkinter - Writing Tk applications with Python
+* Map in [Movingai](htpp://www.movingai.com) with extensions for cost modeling.
+
+## Features
+
+* Run from CLI (for benchmarking) or with GUI interface (for visualization and debugging).
+* Compatible with [Movingai](htpp://www.movingai.com) map format with extensions for cost and dynamic changes (see below)
+* Dynamic changes to map via map scripts (see below).
+* Deadline specification (agent is terminated at deadline).
+* Report of cost, steps, total and remaining time.
+* Automatic mode `-auto` for running group of scenarios (`.scen` format) and exporting stats to `csv` file.
+* Different cost models: mixed, mixed-real, mixed-opt2.
 
 
 ## Director Structure
