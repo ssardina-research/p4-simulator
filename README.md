@@ -74,25 +74,18 @@ If `config_file` or file path not supplied, looks for default `config.py`.
 
 OPTIONS:
 
-```
--h - print help information
--nodiag - disallows diagonal moves (default allows them)
--gui - displays gui
--auto - suppresses info messages and outputs result in csv format
--dynamic - loads changes from script.py to occur during the search
--nonstrict - permits traversal of impassable cells, albeit at infinite cost
--pre - adds a call to agent.preprocess() before starting search
--realtime - times every step (default times return of first step only)
--batch <SCEN_FILE> <OUT_FILE> [reps] - reads problems from the scen file and outputs
-results to the OUT_FILE in csv format. Optionally takes integer in reps to specify
-number of repetitions across which test times are to be averaged.
-The <SCEN_FILE> MUST be in movingai scenario file format.  
-The map to be used must be in the same directory as the <SCEN_FILE> and its 
-name is the prefix up to .map included. For example, if the <SCEN_FILE> 
-is ../maps/bgmaps/AR0011SR.map.aopd.scen, then the map to be used will be file 
-../maps/bgmaps/AR0011SR.map. The map names inside the .scen file will be ignored. 
-```
-
+* `-h` - print help information
+* `-nodiag` - disallows diagonal moves (default allows them)
+* `-gui` - displays gui
+* `-auto` - suppresses info messages and outputs result in csv format
+* `-dynamic` - loads changes from script.py to occur during the search
+* `-nonstrict` - permits traversal of impassable cells, albeit at infinite cost
+* `-pre` - adds a call to agent.preprocess() before starting search
+* `-realtime` - times every step (default times return of first step only)
+* `-batch <SCEN_FILE> <OUT_FILE> [reps]` - reads problems from the `scen` file and outputs results to the `OUT_FILE` in csv format. Optionally takes integer `reps` for number of repetitions across which test times are to be averaged. 
+    * The `<SCEN_FILE>` MUST be in Movingai scenario file format.  
+    * The map to be used must be in the same directory as the `<SCEN_FILE>` and its name is the prefix up to `.map` included. For example, if the `<SCEN_FILE>`  is `../maps/bgmaps/AR0011SR.map.aopd.scen`, then the map to be used will be file `../maps/bgmaps/AR0011SR.map`. 
+    * The map names inside the `.scen` file will be ignored. 
 
 
 ## Examples 
