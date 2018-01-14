@@ -641,7 +641,7 @@ class SimController(object):
         else:
             # no gui - print to terminal
             # print(msg)
-            logging.info("STATUS REPORTING (no GUI): {}".format(msg))
+            logging.info("STATUS (no GUI): {}".format(msg))
 
     def loadScript(self):
         try:
