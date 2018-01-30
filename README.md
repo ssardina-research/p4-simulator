@@ -8,7 +8,7 @@ The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) forma
 Check some screenshots of p4: 
 [screenshot 1](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png) - 
 [screenshot 2](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png) - 
-[screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png) - 
+[screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png) - 
 [screenshot 4](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png)
 
 
