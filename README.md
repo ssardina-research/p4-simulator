@@ -90,7 +90,7 @@ OPTIONS:
 
 ## Examples 
 
-Aall run inside folder `src/`:
+All run from folder `src/`:
 
 
 - Run from customised config file and ASTAR in uniform cost with a deadline of 4 seconds:
