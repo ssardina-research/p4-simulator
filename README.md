@@ -5,6 +5,8 @@
 
 The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) format. Run with GUI, to observe their operation, without GUI to obtain cost, steps and time-taken, or in auto mode to output `csv` files of accumulated results from map problems in `.scen` format (also from Movingai).
 
+[screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/path/to/screenshot01.png)
+
 
 -----------------------
 [TOC]
