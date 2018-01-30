@@ -213,8 +213,22 @@ You should have received a copy of the GNU General Public License along with thi
 
 ## Screenshots
 
+Blue agent navigating to destination:
+
+![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png)
+
+After arrival, area searched (closed list) is shown in yellow:
+
 
 ![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png)
+
+
+A random agent:
+
+![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png)
+
+
+Use via terminal to do batch testing (many scenario problems in one map):
 
 ![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png)
 
