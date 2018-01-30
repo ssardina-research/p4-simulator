@@ -5,7 +5,14 @@
 
 The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) format. Run with GUI, to observe their operation, without GUI to obtain cost, steps and time-taken, or in auto mode to output `csv` files of accumulated results from map problems in `.scen` format (also from Movingai).
 
-![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png)
+Check some screenshots of p4: 
+[screenshot 1](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png) - 
+[screenshot 2](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png) - 
+[screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png) - 
+[screenshot 4](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png)
+
+
+
 
 
 -----------------------
@@ -201,3 +208,13 @@ This program is free software: you can redistribute it and/or modify it under th
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
+
+----------------------------
+
+## Screenshots
+
+
+![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png)
+
+![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png)
+
