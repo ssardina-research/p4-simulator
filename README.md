@@ -5,17 +5,17 @@
 
 The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) format. Run with GUI, to observe their operation, without GUI to obtain cost, steps and time-taken, or in auto mode to output `csv` files of accumulated results from map problems in `.scen` format (also from Movingai).
 
+The p4 system has been used in the our [Goal Recognition in Path Planning AAMAS'17](https://dl.acm.org/citation.cfm?id=3091232) and the [Deception in Path Planning IJCAI'17](https://www.ijcai.org/proceedings/2017/610) papers. 
+This [dedicated GR fork](https://bitbucket.org/ssardina-research/p4-simulator-gr) of this repo for the extensions to p4 related to those works; check the subfolders:
+
+* For p4 in Goal Recognition in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/GR).
+* For p4 in Deception in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/DPP).
+
 Check some screenshots of p4: 
 [screenshot 1](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png) - 
 [screenshot 2](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png) - 
 [screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png) - 
 [screenshot 4](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png)
-
-The p4 system has been used in the our [Goal Recognition in Path Planning AAMAS'17](https://dl.acm.org/citation.cfm?id=3091232) and the [Deception in Path Planning IJCAI'17](https://www.ijcai.org/proceedings/2017/610) papers. 
-This [dedicated GR fork](https://bitbucket.org/ssardina-research/p4-simulator-gr) of this repo for the extensions to p4 related to those works; check the subfolders:
-
-* For p4 in Goal Recognition in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/GR/?at=master).
-* For p4 in Deception in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/DPP/?at=master).
 
 
 -----------------------
