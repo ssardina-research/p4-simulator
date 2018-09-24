@@ -1,7 +1,7 @@
 # p4 - Python Path Planning Project
 
 
-[p4 (aka the "Python Path Planning Project")](https://bitbucket.org/ssardina/soft-p4-sim-core) is a Python-based path planning framework and simulator, useful to prototype, evaluate, and benchmark path planning algoritms. The system began as a Python version of the Java-based [APPARATE path-planning simulator](https://bitbucket.org/ssardina-research/apparate-simulator) to be able to prototype algorithms in a "lighter" programming language. It started as part of Peta Master's 2013 programming course project and then extended to support her Honours thesis and doctorate program, under the supervision of Sebastian Sardina.
+[p4 (aka the "Python Path Planning Project")](https://bitbucket.org/ssardina/soft-p4-sim-core) is a Python-based path planning framework and simulator, useful to prototype, evaluate, and benchmark path planning algoritms. The system began as a Python version of the Java-based [APPARATE path-planning simulator](https://bitbucket.org/ssardina-research/apparate-simulator) to be able to prototype algorithms in a "lighter" programming language. It started as part of Peta Master's 2013 programming course project and then extended to support her Honours thesis and doctorate program, under the supervision of A/Prof. Sebastian Sardina.
 
 The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) format. Run with GUI, to observe their operation, without GUI to obtain cost, steps and time-taken, or in auto mode to output `csv` files of accumulated results from map problems in `.scen` format (also from Movingai).
 
@@ -11,8 +11,11 @@ Check some screenshots of p4:
 [screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png) - 
 [screenshot 4](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png)
 
+The p4 system has been used in the our [Goal Recognition in Path Planning AAMAS'17](https://dl.acm.org/citation.cfm?id=3091232) and the [Deception in Path Planning IJCAI'17](https://www.ijcai.org/proceedings/2017/610) papers. 
+This [dedicated GR fork](https://bitbucket.org/ssardina-research/p4-simulator-gr) of this repo for the extensions to p4 related to those works; check the subfolders:
 
-
+* For p4 in Goal Recognition in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/GR/?at=master).
+* For p4 in Deception in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/DPP/?at=master).
 
 
 -----------------------
