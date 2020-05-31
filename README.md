@@ -12,10 +12,10 @@ This [dedicated GR fork](https://bitbucket.org/ssardina-research/p4-simulator-gr
 * For p4 in Deception in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/DPP).
 
 Check some screenshots of p4: 
-[screenshot 1](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png) - 
-[screenshot 2](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png) - 
-[screenshot 3](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png) - 
-[screenshot 4](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot04.png)
+[screenshot 1](docs/screenshots/screenshot01.png) - 
+[screenshot 2](docs/screenshots/screenshot02.png) - 
+[screenshot 3](docs/screenshots/screenshot03.png) - 
+[screenshot 4](docs/screenshots/screenshot04.png)
 
 
 -----------------------
@@ -218,20 +218,20 @@ You should have received a copy of the GNU General Public License along with thi
 
 Blue agent navigating to destination:
 
-![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot01.png)
+![screenshot](docs/screenshots/screenshot01.png)
 
 After arrival, area searched (closed list) is shown in yellow:
 
 
-![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot02.png)
+![screenshot](docs/screenshots/screenshot02.png)
 
 
 A random agent:
 
-![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png)
+![screenshot](docs/screenshots/screenshot03.png)
 
 
 Use via terminal to do batch testing (many scenario problems in one map):
 
-![screenshot](https://bitbucket.org/ssardina-research/p4-simulator/raw/master/docs/screenshots/screenshot03.png)
+![screenshot](docs/screenshots/screenshot03.png)
 
