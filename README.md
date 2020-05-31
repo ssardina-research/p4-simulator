@@ -8,8 +8,8 @@ The p4 simulator relies on maps in the [Movingai](htpp://www.movingai.com) forma
 The p4 system has been used in the our [Goal Recognition in Path Planning AAMAS'17](https://dl.acm.org/citation.cfm?id=3091232) and the [Deception in Path Planning IJCAI'17](https://www.ijcai.org/proceedings/2017/610) papers. 
 This [dedicated GR fork](https://bitbucket.org/ssardina-research/p4-simulator-gr) of this repo for the extensions to p4 related to those works; check the subfolders:
 
-* For p4 in Goal Recognition in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/GR).
-* For p4 in Deception in Path Planning see [here](https://bitbucket.org/ssardina-research/p4-simulator-gr/src/master/src/DPP).
+* For p4 in Goal Recognition in Path Planning see [here](https://github.com/ssardina-planning/p4-simulator-gr/tree/master/src/GR).
+* For p4 in Deception in Path Planning see [here](https://github.com/ssardina-planning/p4-simulator-gr/tree/master/src/DPP).
 
 Check some screenshots of p4: 
 [screenshot 1](docs/screenshots/screenshot01.png) - 
@@ -19,7 +19,17 @@ Check some screenshots of p4:
 
 
 -----------------------
-[TOC]
+* [Prerequisites](#prerequisites)
+* [Features](#features)
+* [Director Structure](#director-structure)
+* [Usage](#usage)
+* [Examples](#examples)
+* [Interrogate Model Outside Simulator](#interrogate-model-outside-simulator)
+* [Batch and Profiling (Unix only)](#batch-and-profiling-unix-only)
+* [Technical Information](#technical-information)
+* [Contributors and Contact](#contributors-and-contact)
+* [License](#license)
+* [Screenshots](#screenshots)
 
 ## Prerequisites
 
