@@ -284,3 +284,5 @@ fabric.properties
 
 *-extras
 *.csv
+*.idea/
+.settings/
