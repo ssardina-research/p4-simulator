@@ -31,92 +31,105 @@ import logging
 import p4_utils
 from p4_utils import * # sets constants
 
+# mixed (DEFAULT): one used in the contest using sqrt(2) for diagonals.
+# straight: moves are 1*cost of destination.
+# diagonal: moves are sqrt(2)*cost of destination.
+# mixed-real: full center-to-center cost between source and destination cell.
+# mixed-opt1: like mixed but optimized to 1.5.
+# straight: moves are 1*cost of destination.
+# diagonal: moves are 1.5*cost of destination.
+# mixed-opt2: like mixed but optimized to 1.5*2.
+COST_MODELS = ['mixed', 'mixed-real', 'mixed-opt1',
+               'mixed-opt2', 'straight', 'diagonal']
 
 # Construct parser object
+# https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument
 parser = argparse.ArgumentParser(description="P4 Path Planning Simulator - Version " + VERSION)
+parser.add_argument('-version',
+                    action='version',
+                    version='P4 Path Planning Simulator ' + VERSION)
 parser.add_argument("CFG_FILE",
                     nargs='?',
                     default="config.py",
                     help="name of configuration file")
-parser.add_argument('-m',
+parser.add_argument('-m', '--map', 
                     action='store',
                     dest='MAP_FILE',
-                    help="map filename")
-parser.add_argument('-s',
+                    help="map file or filename in movingai format. If filename is given, it is looked in ../maps/")
+parser.add_argument('-s', '--start',
                     action='store',
                     dest='START',
-                    help="start coords")
-parser.add_argument('-g',
+                    help="start coords in (col,row) format")
+parser.add_argument('-g', '--goal',
                     action='store',
                     dest='GOAL',
-                    help="goal (target) coords")
-parser.add_argument('-a',
+                    help="goal (target) coords in (col,row) format")
+parser.add_argument('-a','--agent',
                     action='store',
                     dest='AGENT_FILE',
-                    help="agent filename")
-parser.add_argument('-nodiag',
+                    help="agent file or filename respecting the API. If filename is given it is looked in agents/")
+parser.add_argument('-nd', '--no-diagonals',
                     action='store_false',
                     dest='DIAGONAL',
                     default=True,
-                    help="disallow diagonal moves (default diagonals allowed)")
-parser.add_argument('-d',
+                    help="disallow diagonal moves (default: %(default)s)")
+parser.add_argument('-d', '--deadline',
                     action='store',
                     dest='DEADLINE',
                     default=0,
-                    help="deadline in seconds (default: %(default)s).")
-parser.add_argument('-gui',
+                    help="deadline in seconds; 0 no deadline (default: %(default)s).")
+parser.add_argument('-gui', '--gui',
                     action='store_true',
                     dest='GUI',
                     default=False,
-                    help="display gui (default: %(default)s).")
-parser.add_argument('-e',
+                    help="display GUI (default: %(default)s).")
+parser.add_argument('-e', '--heuristic',
                     action='store',
                     dest='HEURISTIC',
                     default="euclid",
-                    help="euclid, manhattan, or octile (default: %(default)s).")
-parser.add_argument('-r',
+                    choices=['euclid', 'manhattan', 'octile'],
+                    help="heuristic to use (default: %(default)s).")
+parser.add_argument('-r', '--speed',
                     action='store',
                     dest='SPEED',
                     default=0,
                     help="speed rate (default: %(default)s).")
-parser.add_argument('-f',
+parser.add_argument('-f', '-free',
                     action='store',
                     dest='FREE_TIME',
                     default=0,
-                    help="steps returned <FREE_TIME are untimed, i.e., counted as 0 secs (default: %(default)s).")
-parser.add_argument('-cm',
+                    help="steps returned < FREE_TIME are untimed, i.e., counted as 0 secs (default: %(default)s).")
+parser.add_argument('-cm', '--cost',
                     action='store',
                     dest='COST_MODEL',
                     default="mixed",
-                    help="mixed, mixed-real, mixed-opt1, or mixed-opt2 (default: %(default)s).")
-parser.add_argument('-c',
+                    choices = COST_MODELS,
+                    help="cost model to use (default: %(default)s).")
+parser.add_argument('-c', '--cost-file',
                     action='store',
                     dest='COST_FILE',
                     help="file with cost of cells")
-parser.add_argument('-version',
-                    action='version',
-                    version='P4 Path Planning Simulator ' + VERSION)
-parser.add_argument('-dynamic',
+parser.add_argument('-dy', '-dynamic', '--dynamic',
                     action='store_true',
                     dest='DYNAMIC',
                     default=False,
                     help="make changes based on script.py (default: %(default)s).")
-parser.add_argument('-nonstrict',
+parser.add_argument('-ns', '-nonstrict', '--nonstrict',
                     action='store_false',
                     dest='STRICT',
                     default=True,
                     help="allow agent to traverse impassable cells, albeit at infinite cost (default: %(default)s).")
-parser.add_argument('-pre',
+parser.add_argument('-pre', '--preprocess',
                     action='store_true',
                     dest='PREPROCESS',
                     default=False,
-                    help="give agent opportunity to preprocess map (default: %(default)s).")
-parser.add_argument('-realtime',
+                    help="calls agent.preprocess() before starting search (default: %(default)s).")
+parser.add_argument('-rt', '-realtime', '--realtime',
                     action='store_true',
                     dest='REALTIME',
                     default=False,
-                    help="time every step (default: %(default)s).")
-parser.add_argument('-batch',
+                    help="time every step instead of just first step (default: %(default)s).")
+parser.add_argument('-b', '-batch', '--batch',
                     nargs='*',
                     dest='BATCH',
                     action='store',

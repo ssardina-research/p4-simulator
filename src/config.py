@@ -22,7 +22,7 @@ MAP_FILE  = "../maps/bloodvenomfalls.map" 	#map filename - must be in maps (sist
 START     = (128,405)            #coordinates of start location in (col,row) format
 GOAL      = (409,93)             #coordinates of goal location in (col,row) format
 
-GUI = True                      #True = show GUI, False = run on command line
+GUI = False                      #True = show GUI, False = run on command line
 SPEED = 0.0                     #delay between displayed moves in seconds
 DEADLINE = 15                   #Number of seconds to reach goal
 HEURISTIC = 'octile'            #may be 'euclid' or 'manhattan' or 'octile' (default = 'euclid')
