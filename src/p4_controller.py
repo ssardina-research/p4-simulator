@@ -502,9 +502,9 @@ class SimController(object):
             try:
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        nextreturn = self.gen.next()
+                        nextreturn = next(self.gen)
                 else:
-                    nextreturn = self.gen.next()  # call with no SIGNAL
+                    nextreturn = next(self.gen.next)  # call with no SIGNAL
             except Timeout.Timeout:
                 if self.timeremaining < 0:
                     self.timeremaining = 0

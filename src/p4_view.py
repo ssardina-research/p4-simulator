@@ -17,6 +17,7 @@
 
 import signal
 
+# https://docs.python.org/3/library/tkinter.html
 import tkinter
 from tkinter.ttk import * # overwrites gui with smoother components where available
 # from tkFileDialog import askopenfilename
@@ -222,9 +223,11 @@ class Gui(tkinter.Tk):
 
     # BUTTON LISTENERS
     def searchStart(self):
-        """Button listener. Calls nested generator (step) using after function. Step
-           hands off to SimController.hdlStep(), testing against areWeTereYet and outOfTime.
-           If either is True, calls terminateSearch()"""
+        """Button listener. 
+        Calls nested generator (step) using after function.
+        Step hands off to SimController.hdlStep(), testing against areWeTereYet and outOfTime.
+        If either is True, calls terminateSearch()
+        """
         self._setButtonStates(0, 1, 0, 1, 0)
 
         self.setStatusR("Searching...")
@@ -246,12 +249,12 @@ class Gui(tkinter.Tk):
                         self.terminateSearch("Arrived!")
                 finally:
                     yield
-        
+
         if self.simulator.areWeThereYet():
             self.terminateSearch("Arrived!")
         else:
             self.searchjob = self.after(1, next(step()))
-        
+
 
     def searchPause(self):
         """Button listener. Cancels after call to search generator, sets searchToggle"""
