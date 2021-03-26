@@ -1,4 +1,4 @@
-# Copyright (C) 2013-17 Peta Masters and Sebastian Sardina
+# Copyright (C) 2013-21 Peta Masters and Sebastian Sardina
 #
 # This file is part of "P4-Simulator" package.
 #
@@ -202,7 +202,7 @@ class SimController(object):
             out = '\n'
             for a, b in self.cfg.items():
                 # exclude un-printables
-                if a is not "__builtins__" and a is not "MAPREF":
+                if a != "__builtins__" and a != "MAPREF":
                     out = "{} \t {}: {}\n".format(out, a, b)
             logging.info(
                 "Options read from configuration file: {}".format(out))
