@@ -8,29 +8,29 @@ Y_POS = 1
 class Agent(object):
     """Weighted A* using Pohl's original definition - when weight = 1, algorithm returns greedy; when weight = 0, algorithm = Dijkstra"""
     def __init__(self, **kwargs):
-        if kwargs: 
-            self.w = kwargs['weight']                  # 0 <= self.w <= 1 
+        if kwargs:
+            self.w = kwargs['weight']                  # 0 <= self.w <= 1
         else:
             self.w = 1
-            
+
     def setWeight(self, weight):
         self.w = weight
-        
+
     def reset(self, **kwargs):
         self.start = None           # starting point
         self.goal = None            # goal
         self.mapref = None          # logic map
         self.parents = {}           # parents
         self.stepgen = self.step_gen()
-        
+
     def getPath(self, model, start, goal):
         self.reset()
         return self.astar(model, start, goal)
-        
+
     def getCost(self, model, start, goal):
         self.reset()
         return self.astar(model, start, goal, True)
-        
+
     def getNext(self, mapref, current, goal, timeremaining):
         self.start = current
         self.goal = goal
@@ -58,7 +58,7 @@ class Agent(object):
         heappush(open, (0, start, 0))
         self.open_dict[start] = None
         g_child = 0
-        
+
         # avoid "."
         getH = mapref.getH
         getAdj = mapref.getAdjacents
@@ -67,11 +67,11 @@ class Agent(object):
         open_has = self.open_dict.has_key
         getCell = mapref.getCell
         matrix = mapref.matrix
-        
+
         # Check if goal has already been reached
         if start == goal:
             return start
-            
+
         # Astar
         while(open):
             # pop first in queue

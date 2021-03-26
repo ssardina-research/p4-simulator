@@ -20,20 +20,21 @@ import imp
 import importlib
 import signal
 import ast
+import time
 import p4_utils as p4  # sets constants
 import traceback
 import csv
 import copy
 import logging
 
-if p4.TIMER == "time":
-    from time import time as timer
+# if p4.TIMER == "time":
+#     from time import time as timer
 
-    logging.info("Using other timer")
-else:
-    from time import clock as timer
+#     logging.info("Using other timer")
+# else:
+#     from time import clock as timer
 
-    logging.info("Using internal timer")
+#     logging.info("Using internal timer")
 
 # For speed, rather than if/else statements at runtime, load
 # whichever class is appropriate to os but call them by same alias.
@@ -44,7 +45,6 @@ else:
     # from time import clock as timer
     from p4_utils import WinTimeout as Timeout
 
-from time import sleep
 from p4_model import LogicalMap
 
 
@@ -90,7 +90,8 @@ class SimController(object):
         elif self.cfg["BATCH"] is not None:
             try:
                 self.runBatch(*self.cfg["BATCH"])
-                logging.info("\nBatch process completed. Results written to " + self.cfg["BATCH"][1] + ".\n")
+                logging.info(
+                    "\nBatch process completed. Results written to " + self.cfg["BATCH"][1] + ".\n")
             except Exception as e:
                 logging.warning(
                     "\nAn error has occurred. Batch results may be incomplete. l"
@@ -117,7 +118,8 @@ class SimController(object):
 
             except:
                 logging.error("Irrecoverable error. Terminating...")
-                logging.error("Trace-back: \n {}".format(traceback.format_exc()))
+                logging.error(
+                    "Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
 
         if self.cfg.get("GUI"):
@@ -134,7 +136,7 @@ class SimController(object):
                 logging.info("Map file not found: loading default.")
                 self.cfg["MAP_FILE"] = None
 
-            # if cost file exists, get file 
+            # if cost file exists, get file
             costpath = None
             if self.cfg["COST_FILE"] and os.path.exists(self.cfg["COST_FILE"]):
                 costpath = os.path.join(self.cfg["COST_FILE"])
@@ -159,7 +161,8 @@ class SimController(object):
             except:
                 # some other problem
                 logging.error("Pre-processing failed.")
-                logging.error("Trace-back: \n {}".format(traceback.format_exc()))
+                logging.error(
+                    "Trace-back: \n {}".format(traceback.format_exc()))
 
     def initAgent(self):
         # initialise agent - may throw BadAgentException
@@ -192,16 +195,17 @@ class SimController(object):
         try:
             # track previous MAP_FILE setting - map only needs to be redrawn if it's changed
             oldmap = self.cfg.get("MAP_FILE")  # may be None
-            execfile(filename, self.cfg)
+            # execfile(filename, self.cfg)
+            exec(open(filename).read(), self.cfg)
 
-            # display setings
+            # Display settings
             out = '\n'
-            for a, b in self.cfg.iteritems():
-                # exclude unprintables
+            for a, b in self.cfg.items():
+                # exclude un-printables
                 if a is not "__builtins__" and a is not "MAPREF":
                     out = "{} \t {}: {}\n".format(out, a, b)
-            # logging.info
-            logging.info("Options read from configuration file: {}".format(out))
+            logging.info(
+                "Options read from configuration file: {}".format(out))
 
             self.initAgent()
             self.processMap()
@@ -218,11 +222,12 @@ class SimController(object):
             else:
                 self.resetVars()  # no attempt to update GUI
 
-
         except p4.BadMapException:
-            self.updateStatus("Unable to load map: " + self.cfg.get("MAP_FILE"))
+            self.updateStatus("Unable to load map: " +
+                              self.cfg.get("MAP_FILE"))
         except p4.BadAgentException:
-            self.updateStatus("Unable to load agent: " + self.cfg.get("AGENT_FILE"))
+            self.updateStatus("Unable to load agent: " +
+                              self.cfg.get("AGENT_FILE"))
         except:
             # unexpected error
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
@@ -272,15 +277,17 @@ class SimController(object):
                 # Don't set signal for infinite time
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        nextstep = self._get_coordinate(self.gen.next())
+                        nextstep = self._get_coordinate(next(self.gen))
                 else:
-                    nextstep = self._get_coordinate(self.gen.next())  # call with no SIGNAL
+                    nextstep = self._get_coordinate(
+                        next(self.gen))  # call with no SIGNAL
             except Timeout.Timeout:
                 self.timeremaining = 0
                 self.updateStatus("Timed Out!")
             except:
                 self.updateStatus("Agent returned " + str(nextstep))
-                logging.error("Trace-back: \n {}".format(traceback.format_exc()))
+                logging.error(
+                    "Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
                 break
         return self.hdlStop()  # (totalcost, pathsteps, timeremaining, pathtime)
@@ -375,23 +382,27 @@ class SimController(object):
                     except:
                         pass
                 if self.pathsteps in self.gc:
-                    target = self.lmap.nearestPassable(self.gc.get(self.pathsteps))
+                    target = self.lmap.nearestPassable(
+                        self.gc.get(self.pathsteps))
                     self.setGoal(target)
                 if self.pathsteps in self.ac:
-                    newpos = p4.addVectors(current, self.ac.get(self.pathsteps))
+                    newpos = p4.addVectors(
+                        current, self.ac.get(self.pathsteps))
                     current = self.lmap.nearestPassable(newpos)
                     yield newpos  # scripted move is not costed or counted
             try:
-                clockstart = timer()  # start timer
-                nextreturn = self.agent.getNext(self.lmap, current, target, self.timeremaining)
+                # clockstart = timer()  # start timer
+                clockstart = time.process_time()
+                nextreturn = self.agent.getNext(
+                    self.lmap, current, target, self.timeremaining)
                 logging.debug(nextreturn)
-                clockend = timer()
+                # clockend = timer()
+                clockend = time.process_time()
             except:
                 raise p4.BadAgentException()
 
             # Only time first step unless operating in 'realtime' mode. If this is realtime, and the step involved no reasoning (took less than FREE_TIME) do not count its time
-            if ((not self.cfg.get("REALTIME") and self.pathtime) or (
-                        (clockend - clockstart) < self.cfg.get("FREE_TIME"))):
+            if (not self.cfg.get("REALTIME") and self.pathtime) or (clockend - clockstart) < self.cfg.get("FREE_TIME"):
                 steptime = 0
             else:
                 steptime = (clockend - clockstart)
@@ -418,7 +429,8 @@ class SimController(object):
                     cost = float('inf')
                 # agent has made illegal move:
                 if cost == float('inf'):
-                    self.updateStatus("Illegal move at " + str(current) + ":" + str(self.lmap.getCost(current)), False)
+                    self.updateStatus(
+                        "Illegal move at " + str(current) + ":" + str(self.lmap.getCost(current)), False)
                     if self.cfg["STRICT"]:
                         current = previous
                         nextreturn = previous
@@ -531,12 +543,12 @@ class SimController(object):
                 else:
                     currcost = '{0:.2f}'.format(self.pathcost)
                 message = str(nextstep) + " | Cost : " + currcost + \
-                          " | Steps : " + str(self.pathsteps)
+                    " | Steps : " + str(self.pathsteps)
                 if self.cfg.get("DEADLINE"):
                     message += " | Time remaining: " + \
                                str(self.timeremaining)
                 self.updateStatus(message)
-                sleep(self.cfg.get("SPEED"))  # delay, if any
+                time.sleep(self.cfg.get("SPEED"))  # delay, if any
 
     # MENU HANDLERS
     def loadMap(self, mapfile):
@@ -645,7 +657,9 @@ class SimController(object):
 
     def loadScript(self):
         try:
-            execfile('script.py', self.script)
+            # execfile('script.py', self.script)
+            exec(open("./script.py").read(), self.script)
+
             self.gc = self.script.get("GOAL_CHANGE")
             self.gc["ORIGIN"] = self.cfg["GOAL"]  # save in case of reset
             self.tc = self.script.get("TERRAIN_CHANGE")
@@ -666,7 +680,8 @@ class SimController(object):
         self.processPrefs()
         # open scenario file and read into problems list
         scenario = open(infile)
-        problems = [line.strip().split() for line in scenario if len(line) > 20]
+        problems = [line.strip().split()
+                    for line in scenario if len(line) > 20]
         scenario.close
 
         # If csv file doesn't exist, create and write header, then close
@@ -676,7 +691,7 @@ class SimController(object):
                                   quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 fcsv.writerow(['agent', 'no', 'map', 'startx', 'starty', 'goalx', 'goaly', 'optimum', 'actual', 'steps',
                                'time_taken', 'quality'])
-        # Open existing csv file, process each problem and append results     
+        # Open existing csv file, process each problem and append results
         with open(outfile, 'ab') as csvfile:
             fcsv = csv.writer(csvfile, delimiter=',',
                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -687,8 +702,8 @@ class SimController(object):
                 skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
                 logging.info(
                     "========> Running problem {}: from ({},{}) to ({},{}) - Optimal: {}".format(count, scol, srow,
-                                                                                                    gcol, grow,
-                                                                                                    optimum))
+                                                                                                 gcol, grow,
+                                                                                                 optimum))
                 pathname, map = os.path.split(mappath)
                 self.cfg["START"] = (int(scol), int(srow))
                 self.cfg["GOAL"] = (int(gcol), int(grow))
@@ -708,9 +723,11 @@ class SimController(object):
                     except:
                         pass
 
-                time_taken = round(sum(times_taken) / reps, 5)  # calculate average
+                time_taken = round(sum(times_taken) / reps,
+                                   5)  # calculate average
                 total_steps = sum(steps_taken) / reps  # calculate average
-                total_cost = sum(costs_taken) / reps  # calculate average -  precision to compare with movingai costs
+                # calculate average -  precision to compare with movingai costs
+                total_cost = sum(costs_taken) / reps
 
                 try:
                     quality = round(float(optimum) / float(total_cost), 2)
@@ -722,4 +739,5 @@ class SimController(object):
 
 
 if __name__ == '__main__':
-    logging.info("To run the P4 Simulator, type 'python p4.py' at the command line and press <Enter>")
+    logging.info(
+        "To run the P4 Simulator, type 'python p4.py' at the command line and press <Enter>")

@@ -56,7 +56,7 @@ P_POS = 3   # parent coord, formatted (col,row)
 
 def addVectors(a,b):
     return (a[0]+b[0],a[1]+b[1])
-    
+
 def getBlock(topleft,botright):
     """Returns list of coordinates in nominated block - domain agnostic"""
     a1, a2 = topleft
@@ -70,14 +70,14 @@ def getBlock(topleft,botright):
 
 class BadMapException(Exception):
     pass
-    
+
 class BadAgentException(Exception):
     pass
-    
+
 class BadConfigException(Exception):
     pass
-	
-    
+
+
 class Timeout():
     """Timeout class using ALARM signal. Imported for Unix os only.
        Code adapted from http://stackoverflow.com/questions/8464391.
@@ -105,7 +105,7 @@ class WinTimeout():
        every time getNext() is called on the Agent, use of alias with drop through means
        nothing is tested at runtime."""
     class Timeout(Exception): pass
-    
+
     def __init__(self, sec):
         pass
 

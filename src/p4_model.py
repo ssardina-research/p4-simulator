@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-from math import fabs, sqrt 
+from math import fabs, sqrt
 from random import randint
 from collections import deque
 import p4_utils as p4
@@ -181,17 +181,17 @@ class LogicalMap(object):
             for x in self.costs:
                 for y in self.costs:
                     self.mixedmatrix[x, y, True] = float('inf')
-                    
-    def getCell(self, (col, row)):
+
+    def getCell(self, loc):
         """Returns character at (col, row) representing type of terrain there. Returns @ (oob) if call fails
-        :type col: int
-        :type row: int
+        :type loc: (col int, row int)
         """
+        col, row = loc
         try:
             return self.matrix[col][row]
         except:
             return '@'
-        
+
     def isKey(self, position):
         """
         Return true if and only if the (col,row) is a key.

@@ -13,22 +13,22 @@ class Agent(object):
         self.nextmove = None
         self.mapref = None
         self.draw = False
-        
+
     def getWorkings(self):
         return ((zip(*self.openlist)[2], p4.COL_OL), (self.closedlist, p4.COL_CL))
-        
+
     def getNext(self, mapref, current, goal, timeremaining):
         """called by SimController, uses generator to return next step towards goal."""
 
         # map, goal or expected location have changed? re-do the generation planner
-        
+
         if not mapref == self.mapref or not goal == self.goal or not current == self.nextmove:
             self.reset()
             self.goal = goal
             self.mapref = mapref
             self.stepgen = self._gen(current)
-        
-        return self.stepgen.next() 
+
+        return next(self.stepgen) 
 
     def reset(self, **kwargs):
         """Initialises step generator"""
@@ -50,10 +50,10 @@ class Agent(object):
         # print("Planning in progress....")
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
         reverse_path = list(reversed(self.path[:len(self.path)-1]))
-        
+
         #save each step to self.nextmove to compare at getNext()
         self.nextmove = reverse_path[0]
-        
+
         index_start = 0
         if self.draw:
             # first move goes with open, closed and path list for drawing, then yield each move one-by-one
