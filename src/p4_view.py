@@ -15,25 +15,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-import Tkinter, signal
+import signal
+
+import tkinter
+from tkinter.ttk import * # overwrites gui with smoother components where available
+# from tkFileDialog import askopenfilename
+from tkinter.filedialog import askopenfilename
+# import tkinter.import tkMessageBox
+import tkinter.messagebox
+
 from p4_view_map import MapCanvas
 import p4_utils as p4  # contains color constants
-from ttk import *  # overwrites gui with smoother components where available
-from tkFileDialog import askopenfilename
-import tkMessageBox
 
 
-class Gui(Tkinter.Tk):
+class Gui(tkinter.Tk):
     """
-    Inherits from Tkinter.Tk - i.e. this is top level window, with inherited
+    Inherits from tkinter.Tk - i.e. this is top level window, with inherited
     methods used for buildGui().
     """
 
     def __init__(self, simref, lmap):
         """Calls buildGui and initialises variables."""
-        Tkinter.Tk.__init__(self, None)
-        self.mode = Tkinter.StringVar()  # auto updates statusbar L
-        self.searchState = Tkinter.StringVar()  # auto updates statusbar R
+        tkinter.Tk.__init__(self, None)
+        self.mode = tkinter.StringVar()  # auto updates statusbar L
+        self.searchState = tkinter.StringVar()  # auto updates statusbar R
         self.simulator = simref  # ref to SimController
         self.lmap = lmap  # ref to LogicalMap
         self.toolmode = None
@@ -121,7 +126,7 @@ class Gui(Tkinter.Tk):
                 self.toolmode = None
                 self.btnS.config(background="gray", relief="flat")
             else:
-                self.btnReset.config(state=Tkinter.NORMAL)  #if map is moved, allow it to be reset
+                self.btnReset.config(state=tkinter.NORMAL)  #if map is moved, allow it to be reset
                 self.vmap.grab(event)
 
 
@@ -234,7 +239,7 @@ class Gui(Tkinter.Tk):
                     self.terminateSearch("Unable to process next step!")
                 else:
                     if not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
-                        self.searchjob = self.after(1, step().next)
+                        self.searchjob = self.after(1, next(step()))
                     elif self.simulator.outOfTime():
                         self.terminateSearch("Timeout!")
                     else:
@@ -245,7 +250,7 @@ class Gui(Tkinter.Tk):
         if self.simulator.areWeThereYet():
             self.terminateSearch("Arrived!")
         else:
-            self.searchjob = self.after(1, step().next)
+            self.searchjob = self.after(1, next(step()))
         
 
     def searchPause(self):
@@ -293,8 +298,8 @@ class Gui(Tkinter.Tk):
 
     def _setButtonStates(self, sea=0, pau=0, ste=0, sto=0, res=0):
         """Internal. Lets button listeners enable/disable button states as required"""
-        buttonstate = {0: Tkinter.DISABLED,
-                       1: Tkinter.NORMAL}
+        buttonstate = {0: tkinter.DISABLED,
+                       1: tkinter.NORMAL}
         self.btnSearch.config(state=buttonstate[sea])
         self.btnPause.config(state=buttonstate[pau])
         self.btnStep.config(state=buttonstate[ste])
@@ -373,9 +378,9 @@ class Gui(Tkinter.Tk):
         self.geometry("%dx%d+0+0" % (w, h))
 
         #menu
-        menubar = Tkinter.Menu(self)
+        menubar = tkinter.Menu(self)
 
-        filemenu = Tkinter.Menu(menubar, tearoff=0)
+        filemenu = tkinter.Menu(menubar, tearoff=0)
         filemenu.add_command(label='Open Map', command=self.openMap)
         filemenu.add_command(label='Reload Config File', command=self.reconfig)
         filemenu.add_separator()
@@ -383,13 +388,13 @@ class Gui(Tkinter.Tk):
         filemenu.add_separator()
         filemenu.add_command(label='Quit', command=self.quit)
 
-        searchmenu = Tkinter.Menu(menubar, tearoff=0)
+        searchmenu = tkinter.Menu(menubar, tearoff=0)
         searchmenu.add_command(label='Load Agent', command=self.loadAgent)
         searchmenu.add_separator()
         searchmenu.add_command(label='Reset Start', command=self.resetStart)
         searchmenu.add_command(label='Reset Goal', command=self.resetGoal)
 
-        helpmenu = Tkinter.Menu(menubar, tearoff=0)
+        helpmenu = tkinter.Menu(menubar, tearoff=0)
         helpmenu.add_command(label='About p4', command=self.about)
         helpmenu.add_command(label='Help', command=self.help)
 
@@ -400,46 +405,46 @@ class Gui(Tkinter.Tk):
         self.config(menu=menubar)  #show menu
 
         #toolbar
-        toolbar = Tkinter.Frame(self, borderwidth=1, relief='raised')
-        self.btnSearch = Tkinter.Button(toolbar, text="Play", relief='flat', command=self.searchStart,
-                                        state=Tkinter.NORMAL)
+        toolbar = tkinter.Frame(self, borderwidth=1, relief='raised')
+        self.btnSearch = tkinter.Button(toolbar, text="Play", relief='flat', command=self.searchStart,
+                                        state=tkinter.NORMAL)
         self.btnSearch.pack(side='left', padx=2, pady=2)
-        self.btnPause = Tkinter.Button(toolbar, text="Pause", relief='flat', command=self.searchPause,
-                                       state=Tkinter.DISABLED)
+        self.btnPause = tkinter.Button(toolbar, text="Pause", relief='flat', command=self.searchPause,
+                                       state=tkinter.DISABLED)
         self.btnPause.pack(side='left', padx=2, pady=2)
-        self.btnStep = Tkinter.Button(toolbar, text="Step", relief='flat', command=self.searchStep,
-                                      state=Tkinter.NORMAL)
+        self.btnStep = tkinter.Button(toolbar, text="Step", relief='flat', command=self.searchStep,
+                                      state=tkinter.NORMAL)
         self.btnStep.pack(side='left', padx=2, pady=2)
-        self.btnStop = Tkinter.Button(toolbar, text="Stop", relief='flat', command=self.searchStop,
-                                      state=Tkinter.DISABLED)
+        self.btnStop = tkinter.Button(toolbar, text="Stop", relief='flat', command=self.searchStop,
+                                      state=tkinter.DISABLED)
         self.btnStop.pack(side='left', padx=2, pady=2)
-        self.btnReset = Tkinter.Button(toolbar, text="Reset", relief='flat', command=self.searchReset,
-                                       state=Tkinter.DISABLED)
+        self.btnReset = tkinter.Button(toolbar, text="Reset", relief='flat', command=self.searchReset,
+                                       state=tkinter.DISABLED)
         self.btnReset.pack(side='left', padx=2, pady=2)
         toolbar.pack(side='top', fill='x')
 
         #modebar
-        modebar = Tkinter.Frame(self, borderwidth=1, relief='raised')
-        self.btnS = Tkinter.Button(toolbar, text="X", relief='flat', command=self.startMode, state=Tkinter.NORMAL, \
+        modebar = tkinter.Frame(self, borderwidth=1, relief='raised')
+        self.btnS = tkinter.Button(toolbar, text="X", relief='flat', command=self.startMode, state=tkinter.NORMAL, \
                                    background="gray", foreground="green")
         self.btnS.pack(side='left', padx=2, pady=2)
-        self.btnG = Tkinter.Button(toolbar, text="X", relief='flat', command=self.goalMode, state=Tkinter.NORMAL, \
+        self.btnG = tkinter.Button(toolbar, text="X", relief='flat', command=self.goalMode, state=tkinter.NORMAL, \
                                    background="gray", foreground="tomato")
         self.btnG.pack(side='left', padx=2, pady=2)
         
-        self.btnKeep = Tkinter.Button(toolbar, text="Keep", relief='flat', command=self.keepPath, state=Tkinter.NORMAL)
-        self.pin = Tkinter.PhotoImage(file="graphics/pin1.gif")
+        self.btnKeep = tkinter.Button(toolbar, text="Keep", relief='flat', command=self.keepPath, state=tkinter.NORMAL)
+        self.pin = tkinter.PhotoImage(file="graphics/pin1.gif")
         self.btnKeep.config(image = self.pin)
         self.btnKeep.pack(side='left', padx=2, pady=2)
         
-        self.btnShow = Tkinter.Button(toolbar, text="Show", relief='flat', command=self.showWorkings, state=Tkinter.NORMAL)
+        self.btnShow = tkinter.Button(toolbar, text="Show", relief='flat', command=self.showWorkings, state=tkinter.NORMAL)
         self.btnShow.pack(side='left', padx=2, pady=2)
         
         modebar.pack(side="left")
         
         #maparea
-        self.mapholder = Tkinter.Frame(self)
-        self.mapholder.pack(fill=Tkinter.BOTH, expand=1)
+        self.mapholder = tkinter.Frame(self)
+        self.mapholder.pack(fill=tkinter.BOTH, expand=1)
 
         self.vmap = MapCanvas(self.mapholder, self, self.lmap)
         self.vmap.bind_all('<Key>', self.key)  #bind events to canvas
@@ -447,20 +452,20 @@ class Gui(Tkinter.Tk):
         self.vmap.bind('<Button-1>', self.click)
 
         #statusbar
-        statusbar = Tkinter.Frame(self, borderwidth=1, relief='sunken')
+        statusbar = tkinter.Frame(self, borderwidth=1, relief='sunken')
 
         #child zoombar
-        self.zoombar = Tkinter.Scale(statusbar, command=self.slider, orient='horizontal', from_=0, to=4, length=120, \
+        self.zoombar = tkinter.Scale(statusbar, command=self.slider, orient='horizontal', from_=0, to=4, length=120, \
                                      showvalue=0)
         self.zoombar.pack(side='right')
 
         #child label
         #set message to change when self.mode variable changes
-        statusmessage = Tkinter.Label(statusbar, textvariable=self.mode, anchor=Tkinter.W, justify=Tkinter.LEFT)
+        statusmessage = tkinter.Label(statusbar, textvariable=self.mode, anchor=tkinter.W, justify=tkinter.LEFT)
         statusmessage.pack(side='left')
 
         #set message to change when self.searchState variable changes
-        statusstate = Tkinter.Label(statusbar, textvariable=self.searchState, anchor=Tkinter.E, justify=Tkinter.RIGHT)
+        statusstate = tkinter.Label(statusbar, textvariable=self.searchState, anchor=tkinter.E, justify=tkinter.RIGHT)
         statusstate.pack(side='right')
 
         statusbar.pack(side='bottom', fill='x')
