@@ -38,9 +38,10 @@ Check some screenshots of p4:
 
 ## Prerequisites
 
-* Python 2.7
-* python-tk - Tkinter - Writing Tk applications with Python
-* Map in [Movingai](htpp://www.movingai.com) with extensions for cost modeling.
+* Python 3.8+
+* Tkinter - Writing Tk applications with Python
+  * Linux package ``python-tk`  or pip module `tk`
+* Map in [Movingai](htpp://www.movingai.com) with extensions for cost modelling.
 
 ## Features
 
@@ -76,12 +77,12 @@ If `config_file` or file path not supplied, looks for default `config.py`.
 This is the cost model when using mixed-cost grids:
 
 * `mixed` (DEFAULT): one used in the contest using sqrt(2) for diagonals.
-* `straight`: moves are 1*cost of destination.
-* `diagonal`: moves are sqrt(2)*cost of destination.
+* `straight`: moves are `1*cost` of destination.
+* `diagonal`: moves are `sqrt(2)*cost` of destination.
 * `mixed-real`: full center-to-center cost between source and destination cell.
 * `mixed-opt1`: like mixed but optimized to 1.5.
-* `straight`: moves are 1*cost of destination.
-* `diagonal`: moves are 1.5*cost of destination.
+* `straight`: moves are `1*cost` of destination.
+* `diagonal`: moves are `1.5*cost` of destination.
 * `mixed-opt2`: like mixed but optimized to 1.5*2.  
 
 Straight moves are 2 x cost of destination
