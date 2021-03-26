@@ -79,7 +79,7 @@ class Gui(tkinter.Tk):
         """draws cross at goal position"""
         self.vmap.drawCross(goal, p4.COL_GOAL)
         self.goal = goal  #position is saved, so it can be cleared
-        
+
     def clearPoints(self, pointlist):
         """sends list of points to vmap to be redrawn/cleared 
         based on current lmap"""
@@ -206,10 +206,10 @@ class Gui(tkinter.Tk):
 
     def clearGoal(self):
         self.vmap.clearCross(self.goal, self.lmap)
-        
+
     def clearStart(self):
         self.vmap.clearCross(self.start, self.lmap)
-        
+
     def resetGoal(self):
         """Menu listener. Clears cross from old pos and calls SimController to reset """
         self.clearGoal()
@@ -366,15 +366,19 @@ class Gui(tkinter.Tk):
         else:
             self.show = True
             self.btnShow.config(relief="ridge")
-            self.simulator.showWorkings()        
-            
+            self.simulator.showWorkings()
+
     #Initialise GUI
     def _buildGui(self):
-        """Internal. Called by constructor. Creates interface, inc menus, toolbar,
-           mapholder, vmap, zoombar and statusbar"""
+        """Internal. Called by constructor. 
+        Creates interface, inc menus, toolbar, mapholder, vmap, zoombar and statusbar
+        """
         #window
         self.title('p4 Path Planning Simulator')
-        w, h = self.winfo_screenwidth() - 50, self.winfo_screenheight() - 100
+        w, h = self.winfo_screenwidth() - 250, self.winfo_screenheight() - 200
+        
+        # set size of window based on the map
+        w, h = self.lmap.width + 50, self.lmap.height + 100
         self.geometry("%dx%d+0+0" % (w, h))
 
         #menu
