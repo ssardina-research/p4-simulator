@@ -102,7 +102,7 @@ class Gui(tkinter.Tk):
         x = self.vmap.canvasx(event.x) / scale
         y = self.vmap.canvasy(event.y) / scale
         if x >= 0 and y >= 0 and x <= self.lmap.width - 1 and y <= self.lmap.height - 1:
-            self.setStatusR("(" + str(int(x)) + "," + str(int(y)) + ")", False)
+            self.setStatusR(f"({int(x)}, {int(y)})", keep=False)
         else:
             #restore saved status when mouse moves off canvas
             self.setStatusR(self.savedstatus)
@@ -242,6 +242,7 @@ class Gui(tkinter.Tk):
                     self.terminateSearch("Unable to process next step!")
                 else:
                     if not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
+                        print("Let's do another")
                         self.searchjob = self.after(1, next(step()))
                     elif self.simulator.outOfTime():
                         self.terminateSearch("Timeout!")
@@ -287,9 +288,12 @@ class Gui(tkinter.Tk):
         self.simulator.hdlReset()
 
     def terminateSearch(self, msg):
-        """Cancels after call to search generator, resets button states, displays msg,
-           cancels signal - in case of timeout - and calls SimController's hdlStop"""
+        """
+        Cancels after call to search generator, resets button states, displays msg,
+           cancels signal - in case of timeout - and calls SimController's hdlStop
+        """
         self.after_cancel(self.searchjob)
+        print('estmosssssss')
         self._setButtonStates(0, 0, 0, 0, 1)
         self.setStatusR(msg)
         self.searchToggle = False
@@ -310,19 +314,25 @@ class Gui(tkinter.Tk):
         self.btnReset.config(state=buttonstate[res])
 
     #HANDLE STATUSBAR UPDATES
+    def setStatus(self, msg, right_side=False, keep=True):
+        """
+        By default, show msg on left panel
+        """
+        if right_side:
+            self.setStatusR(msg, keep)
+        self.setStatusL(msg, keep)
+
     def setStatusR(self, value, keep=True):
         """Writes to status bar - R"""
         if keep:
             self.savedstatus = value
         self.searchState.set(value)
-        #force immediate update
-        self.update_idletasks()
+        self.update_idletasks() # force immediate update
 
-    def setStatusL(self, value):
+    def setStatusL(self, value, keep=True):
         """Writes to status bar - L"""
         self.mode.set(value)
-        #force immediate update
-        self.update_idletasks()
+        self.update_idletasks() # force immediate update
 
     def goalMode(self):
         """handle red cross toggle"""
