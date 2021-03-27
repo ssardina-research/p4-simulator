@@ -107,6 +107,7 @@ There are a few options that influence the timing of the agent:
 * `-rt` or `--realtime`: take into account the time of every single move of the agent. Otherwise, the system will time just the first step, in which the agent did the actual search. This option is useful when dealing with reactive agents or an agent reasoning at every step.
 * `-f FREE_TIME` or `--free FREE_TIME`: steps taking less than `FREE_TIME` will not be counted towards the total time taken. This could be useful if we want to ignore reactive steps, for example.
 * `-d DEADLINE` or `--deadline DEADLINE`: the total amount of time at disposal for the agent
+  
 ## Examples
 
 All run from folder `src/`.
