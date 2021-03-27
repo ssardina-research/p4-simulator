@@ -28,6 +28,7 @@ Check some screenshots of p4:
     - [Config file](#config-file)
     - [Cost model](#cost-model)
     - [Batch mode](#batch-mode)
+    - [Timing the agent](#timing-the-agent)
   - [Examples](#examples)
   - [Interrogate Model Outside Simulator](#interrogate-model-outside-simulator)
   - [Batch and Profiling (Unix only)](#batch-and-profiling-unix-only)
@@ -99,6 +100,13 @@ It can optionally take an integer `reps` for the number of repetitions across, w
 * The map to be used must be in the same directory as the `<SCEN_FILE>` and its name is the prefix up to `.map` included. For example, if the `<SCEN_FILE>`  is `../maps/bgmaps/AR0011SR.map.aopd.scen`, then the map to be used will be file `../maps/bgmaps/AR0011SR.map`.
 * The map names inside the `.scen` file will be ignored.
 
+### Timing the agent
+
+There are a few options that influence the timing of the agent:
+
+* `-rt` or `--realtime`: take into account the time of every single move of the agent. Otherwise, the system will time just the first step, in which the agent did the actual search. This option is useful when dealing with reactive agents or an agent reasoning at every step.
+* `-f FREE_TIME` or `--free FREE_TIME`: steps taking less than `FREE_TIME` will not be counted towards the total time taken. This could be useful if we want to ignore reactive steps, for example.
+* `-d DEADLINE` or `--deadline DEADLINE`: the total amount of time at disposal for the agent
 ## Examples
 
 All run from folder `src/`.
