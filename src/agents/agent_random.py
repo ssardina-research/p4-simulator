@@ -17,6 +17,8 @@
 
 from random import choice
 
+from agents.agent import AgentP4
+
 class Agent(AgentP4):
     def __init__(self,*kwargs):
         pass
