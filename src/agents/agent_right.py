@@ -1,6 +1,9 @@
 # Copyright (C) 2015 Peta Masters and Sebastian Sardina
 
-class Agent(object):
+from agents.agent import AgentP4
+
+
+class Agent(AgentP4):
     def __init__(self,**kwargs):
         self.clockface = ((1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1))
 
@@ -16,3 +19,7 @@ class Agent(object):
 
     def reset(self, **kwargs):
         pass
+
+
+assert issubclass (Agent, AgentP4)
+assert isinstance (Agent(), AgentP4)

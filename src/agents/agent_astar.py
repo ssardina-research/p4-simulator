@@ -2,10 +2,11 @@
 #
 
 from heapq import heappush, heappop
+from agents.agent import AgentP4
 import  p4_utils as p4               #contains colours and constants
 #from twisted.python.util import println
 
-class Agent(object):
+class Agent(AgentP4):
     """Uses A* algorithm to calculate and return open list, closed list, and path"""
     def __init__(self,**kwargs):
         self.stepgen = None
@@ -110,3 +111,7 @@ class Agent(object):
             current = self.closedlist[current][p4.P_POS]
             self.path.append(current)
         return
+
+
+assert issubclass (Agent, AgentP4)
+assert isinstance (Agent(), AgentP4)

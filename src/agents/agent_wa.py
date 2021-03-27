@@ -1,11 +1,13 @@
 from heapq import heappush, heappop, heapify
 from time import time
 
+from agents.agent import AgentP4
+
 INF = float('inf')
 X_POS = 0
 Y_POS = 1
 
-class Agent(object):
+class Agent(AgentP4):
     """Weighted A* using Pohl's original definition - when weight = 1, algorithm returns greedy; when weight = 0, algorithm = Dijkstra"""
     def __init__(self, **kwargs):
         if kwargs:
@@ -113,3 +115,6 @@ class Agent(object):
         #path not found
         return None
 
+
+assert issubclass (Agent, AgentP4)
+assert isinstance (Agent(), AgentP4)

@@ -17,7 +17,7 @@
 
 from random import choice
 
-class Agent(object):
+class Agent(AgentP4):
     def __init__(self,*kwargs):
         pass
 
@@ -31,3 +31,6 @@ class Agent(object):
 
     def reset(self, **kwargs):
         pass
+
+assert issubclass (Agent, AgentP4)
+assert isinstance (Agent(), AgentP4)
