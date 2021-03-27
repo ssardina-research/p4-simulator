@@ -17,6 +17,7 @@
 
 import signal
 
+# https://docs.python.org/3/library/tk.html
 # https://docs.python.org/3/library/tkinter.html
 import tkinter
 from tkinter.ttk import * # overwrites gui with smoother components where available
@@ -24,6 +25,7 @@ from tkinter.ttk import * # overwrites gui with smoother components where availa
 from tkinter.filedialog import askopenfilename
 # import tkinter.import tkMessageBox
 import tkinter.messagebox
+from p4_controller import SimController
 
 from p4_view_map import MapCanvas
 import p4_utils as p4  # contains color constants
@@ -35,7 +37,7 @@ class Gui(tkinter.Tk):
     methods used for buildGui().
     """
 
-    def __init__(self, simref, lmap):
+    def __init__(self, simref : SimController, lmap):
         """Calls buildGui and initialises variables."""
         tkinter.Tk.__init__(self, None)
         self.mode = tkinter.StringVar()  # auto updates statusbar L
@@ -223,7 +225,9 @@ class Gui(tkinter.Tk):
 
     # BUTTON LISTENERS
     def searchStart(self):
-        """Button listener. 
+        """
+        Button listener.  This is used only on GUI mode.
+
         Calls nested generator (step) using after function.
         Step hands off to SimController.hdlStep(), testing against areWeTereYet and outOfTime.
         If either is True, calls terminateSearch()
@@ -232,6 +236,19 @@ class Gui(tkinter.Tk):
 
         self.setStatusR("Searching...")
         self.searchToggle = True
+
+        try:
+            while not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
+                self.simulator.hdlStep()
+                print(self.simulator.timeremaining)
+            if self.simulator.outOfTime():
+                self.terminateSearch("Timeout!")
+            else:
+                self.terminateSearch("Arrived!")
+        except p4.BadAgentException:
+                self.terminateSearch("Unable to process next step!")
+
+        return
 
         # Nested generator returns control to GUI between steps
         def step():

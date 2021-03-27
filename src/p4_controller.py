@@ -21,6 +21,7 @@ import importlib
 import signal
 import ast
 import time
+from agents.agent import AgentP4
 import p4_utils as p4  # sets constants
 import traceback
 import csv
@@ -31,6 +32,7 @@ import logging
 # whichever class is appropriate to os but call them by same alias.
 if os.name == 'posix':
     # from time import time as timer
+    print("using posix")
     from p4_utils import Timeout
 else:
     # from time import clock as timer
@@ -97,6 +99,7 @@ class StatusBar(object):
         """Performs the display of the current status bar message"""
         self.report_func(self.get(), *args, **kargs)
 
+
 class SimController(object):
     """
     Controls the simulator. Handles all the business logic, inc search.
@@ -114,9 +117,10 @@ class SimController(object):
         """
         logging.info("Initialising SimController")
         # set defaults
-        self.lmap = None  # Ref to LogicalMap object
-        self.gui = None  # Ref to Gui object
-        self.agent = None  # Ref to Agent object
+        self.lmap: LogicalMap = None  # Ref to LogicalMap object
+        # Ref to Gui object (load the module later only if used)
+        self.gui = None
+        self.agent: AgentP4 = None  # Ref to Agent object
         self.gen = None  # Ref to step generator
         self.current = None  # current search coordinates
         self.pathcost, self.pathsteps, self.pathtime = 0, 0, 0
@@ -124,7 +128,8 @@ class SimController(object):
         self.timeout = float('inf')
 
         self.status_bar = StatusBar("Status bar initialized")
-        self.status_bar.set_report_func(lambda msg:logging.info("STATUS (no GUI): {}".format(msg)))
+        self.status_bar.set_report_func(
+            lambda msg: logging.info("STATUS (no GUI): {}".format(msg)))
 
         self.status_bar.display()
         self.path = set()  # set of all coordinates displayed as part of path
@@ -223,13 +228,8 @@ class SimController(object):
             dirname_agent = os.path.dirname(self.cfg.get("AGENT_FILE"))
             basename_agent = os.path.basename(self.cfg.get("AGENT_FILE"))
 
-            if not dirname_agent:
-                # if no directory is specified, assume ../maps/
-                dirname_agent = 'agents/'
-            else:
-                dirname_agent = dirname_agent + '/'
-
-            agentfile = dirname_agent + basename_agent
+            agentfile = os.path.join(
+                dirname_agent if dirname_agent else 'agents/', basename_agent)
             logging.info("Agent to be used: {}".format(agentfile))
             self.loadAgent(agentfile)
         except:
@@ -276,9 +276,11 @@ class SimController(object):
                 self.resetVars()  # no attempt to update GUI
 
         except p4.BadMapException:
-            self.status_bar.set(f"Unable to load map: {self.cfg.get('MAP_FILE')}")
+            self.status_bar.set(
+                f"Unable to load map: {self.cfg.get('MAP_FILE')}")
         except p4.BadAgentException:
-            self.status_bar.set(f"Unable to load agent: {self.cfg.get('AGENT_FILE')}")
+            self.status_bar.set(
+                f"Unable to load agent: {self.cfg.get('AGENT_FILE')}")
         except:
             # unexpected error
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
@@ -317,9 +319,12 @@ class SimController(object):
         self.gui.setStart(self.cfg["START"])
         self.gui.setGoal(self.cfg["GOAL"])
 
-        self.status_bar.set_report_func(lambda msg,**kargs: self.gui.setStatus(msg, kargs))
+        # register GUI status bar report function
+        self.status_bar.set_report_func(
+            lambda msg, **kargs: self.gui.setStatus(msg, kargs))
         self.status_bar.set("OK")
-        self.gui.mainloop()
+
+        self.gui.mainloop()  # start TK main loop
 
     def search(self):
         """Performs command line search by calls to generator """
@@ -414,7 +419,7 @@ class SimController(object):
         Note: gen maintains state for supplied coordinates but updates pathCost,
         pathSteps, pathTime and timeremaining.
 
-        p4 uses this same generator for command line and GUI search.
+        p4 uses this same generator for CLI and GUI search.
 
         :param current: Current position.
         :type current: (int, int)
@@ -446,13 +451,11 @@ class SimController(object):
                     current = self.lmap.nearestPassable(newpos)
                     yield newpos  # scripted move is not costed or counted
             try:
-                # clockstart = timer()  # start timer
                 clockstart = time.process_time()
-                nextreturn = self.agent.getNext(
-                    self.lmap, current, target, self.timeremaining)
-                logging.debug(nextreturn)
-                # clockend = timer()
+                next_cell = self.agent.getNext(
+                    self.lmap, current, target, self.timeremaining)  # pair (x, y) to move
                 clockend = time.process_time()
+                logging.debug(next_cell)
             except:
                 raise p4.BadAgentException()
 
@@ -466,10 +469,10 @@ class SimController(object):
             # Agent may have returned single step or step plus sets of coords and colors.
             # Try/except distinguishes between them
             try:
-                x = nextreturn[1][0]  # fails if nextreturn is coord only
-                current, configsets = nextreturn
+                x = next_cell[1][0]  # fails if nextreturn is coord only
+                current, configsets = next_cell
             except TypeError:
-                current = nextreturn
+                current = next_cell
             finally:
                 self.pathsteps += 1
                 self.pathtime += steptime
@@ -484,193 +487,20 @@ class SimController(object):
                     cost = float('inf')
                 # agent has made illegal move:
                 if cost == float('inf'):
-                    self.status_bar.set(f"Illegal move at {current} : {self.lmap.getCost(current)}", right_side=True)
+                    self.status_bar.set(
+                        f"Illegal move at {current} : {self.lmap.getCost(current)}", right_side=True)
                     if self.cfg["STRICT"]:
                         current = previous
-                        nextreturn = previous
+                        next_cell = previous
                         self.pathsteps -= 1
                         cost = 0
                 self.pathcost += cost
-            yield nextreturn
+            yield next_cell
 
-    # BUTTON HANDLERS
-    def hdlReset(self, msg="OK"):
-        """Button handler. Clears map, resets GUI and calls setVars"""
-        if self.gotscript:
-            self.lmap = LogicalMap(os.path.join("../maps/", self.cfg["MAP_FILE"]))
-            self.gui.setLmap(self.lmap)
-            self.gui.vmap.drawMap(self.lmap)
-            self.cfg["GOAL"] = self.gc["ORIGIN"]
 
-        else:
-            # clear map
-            self.gui.vmap.clear(self.path, self.lmap)
-            if self.fullsearchflag:
-                self.status_bar.set("Redrawing map")
-                self.status_bar.set("Please wait...", right_side=False)
-                for (a, b) in self.coordsets:
-                    self.gui.vmap.clear(a, self.lmap)
-                self.fullsearchflag = False
-                self.status_bar.set("", right_side=False)
-            # resize and reposition
-            self.gui.resetPos()
-            self.gui.resetZoom()
-        # reset vars
-        self.resetVars()
-        self.agent.reset()
 
-        self.gui.setStart(self.cfg["START"])
-        self.gui.setGoal(self.cfg["GOAL"])
-        if self.keptpath:
-            self.gui.vmap.drawSet(self.keptpath, "orange")
-        self.gui.cancelWorkings()
-        self.status_bar.set(msg)
-        self.status_bar.set("", right_side=True)  # clears RIGHT statusbar
 
-    def hdlStop(self):
-        """Button handler. Displays totals."""
-        self.status_bar.set(cost=self.pathcost, no_steps=self.pathsteps,
-                            time_left=self.timeremaining, time_taken=self.pathtime)
-        return (self.pathcost, self.pathsteps, self.timeremaining, self.pathtime)
 
-    def hdlStep(self):
-        """Button handler. Performs one step for GUI Step or Search.
-
-           Checks for goal, calls gen to get next step from agent, displays step on map,
-           and updates status bar. If "SPEED" set, inserts delay.
-
-           Note: delay occurs whether called as single step or within
-           continuous search; with step, the delay is unnoticeable because of the time
-           taken to click the button again."""
-        if not self.current == self.cfg["GOAL"] and self.timeremaining:
-
-            try:
-                if self.timeout < float('inf'):
-                    with Timeout(self.timeout):  # call under SIGNAL
-                        next_return = next(self.gen)
-                else:
-                    next_return = next(self.gen.next)  # call with no SIGNAL
-            except Timeout.Timeout:
-                if self.timeremaining < 0:
-                    self.timeremaining = 0
-                    self.status_bar.set("Timeout!", right_side=False)
-                else:
-                    self.status_bar.set("No path found", right_side=False)
-                self.hdlStop()
-            except:
-                self.status_bar.set("Agent returned exception on new step", right_side=False)
-                self.hdlStop()
-            else:  # try/except/else...
-                # does nextreturn include a list of coordinates to draw?
-                if isinstance(next_return[1], (list, tuple)):
-                    next_step, coord_sets = next_return
-                    for coord_set in coord_sets:
-                        if coord_set[1] == 'reset':
-                            self.gui.vmap.clear(coord_set[0], self.lmap)
-                        else:
-                            self.gui.vmap.drawSet(coord_set[0], coord_set[1])
-                    self.gui.setStart(self.cfg["START"])
-                    self.gui.setGoal(self.cfg["GOAL"])
-                    self.fullsearchflag = True
-                    self.coordsets = coord_sets
-                    self.status_bar.set("Plotting path...", right_side=True)
-                else:
-                    # nextreturn just includes the next coordinate, no drawing data
-                    next_step = next_return
-
-                    # Paint path
-                self.gui.vmap.drawSet(self.path, "blue")
-                self.gui.vmap.drawPoint(next_step, "white")
-                self.current = next_step
-                self.path.add(next_step)
-
-                message = f"{next_step} | Cost: {self.pathcost} | Steps: {self.pathsteps}"
-                if self.cfg.get("DEADLINE"):
-                    self.status_bar.set(curr_step=next_step, cost=self.pathcost, no_steps=self.pathsteps, time_left=self.timeremaining)
-                else:
-                    self.status_bar.set(curr_step=next_step, cost=self.pathcost, no_steps=self.pathsteps)
-
-                time.sleep(self.cfg.get("SPEED"))  # delay, if any
-
-    # MENU HANDLERS
-    def loadMap(self, mapfile):
-        """
-        Menu handler: File - Open Map. Loads map based on openfiledialog in
-        view. Creates new LogicalMap object and resets based on config
-
-        :type mapfile: string
-        """
-        try:
-            self.status_bar.set("Loading map...")
-            self.lmap = LogicalMap(mapfile)
-
-            # pass new LogicalMap references to Gui and MapCanvas (vmap)
-            self.gui.setLmap(self.lmap)
-            self.gui.vmap.drawMap(self.lmap)
-
-        except:
-            self.status_bar.set("Unable to load map: " + mapfile)
-
-        else:
-            self.processPrefs()
-            # generate random start and goal coordinates
-            x = y = None
-            while x == y:  # make sure start != goal
-                x = self.lmap.generateCoord()
-                y = self.lmap.generateCoord()
-            self.cfg["START"] = x
-            self.cfg["GOAL"] = y
-
-            self.cfg["MAP_FILE"] = os.path.basename(mapfile)
-            msg = "Loaded " + self.cfg["MAP_FILE"]
-            self.hdlReset(msg)
-
-    def setStart(self, start=None):
-        """Menu handler: Search - Reset Start"""
-        if start:
-            self.cfg["START"] = start
-        else:
-            self.cfg["START"] = self.lmap.generateCoord()
-        if self.gui is not None:
-            self.gui.clearStart()
-            self.gui.setStart(self.cfg["START"])
-            self.status_bar.set(f"Start moved to {self.cfg['START']}")
-            # TODO check search not in progress before resetting generator.
-            self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
-
-    def setGoal(self, goal=None):
-        """Menu handler: Search - Reset Goal"""
-        if goal:
-            self.cfg["GOAL"] = goal
-        else:
-            self.cfg["GOAL"] = self.lmap.generateCoord()
-        if self.gui is not None:
-            self.gui.clearGoal()
-            self.gui.setGoal(self.cfg["GOAL"])
-            self.status_bar.set(f"Goal moved to {self.cfg['GOAL']}")
-
-    def loadAgent(self, agentpath):
-        """Menu handler: Search - Load Agent. Loads agent based on openfiledialog in
-           view. Also called from readConfig()"""
-        try:
-            agentfile = os.path.basename(agentpath)
-            if agentfile[-3:] == ".py":  # strip extension from agentfile, if present
-                agentfile = agentfile[:-3]
-            else:
-                agentpath = agentpath + ".py"  # add extension to agentpath, if absent
-            # load or reload module
-            agentmod = imp.load_source(agentfile, agentpath)
-            # create Agent and pass in current config settings
-            self.agent = agentmod.Agent()
-            self.agent.reset()
-
-            self.status_bar.set(f"Initialised {agentfile}")
-        except:
-            self.status_bar.set(f"Unable to load {agentfile}")
-            logging.error("Trace-back: \n {}".format(traceback.format_exc()))
-            raise
-        else:
-            self.cfg["AGENT_FILE"] = agentfile
 
     def areWeThereYet(self):
         """Returns True/False."""
@@ -765,6 +595,196 @@ class SimController(object):
                 fcsv.writerow(
                     [self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, total_cost,
                      total_steps, time_taken, quality])
+
+
+    ################################################################################
+    # BUTTON HANDLERS FOR THE GUI
+    ################################################################################
+
+    def hdlReset(self, msg="OK"):
+        """Button handler. Clears map, resets GUI and calls setVars"""
+        if self.gotscript:
+            self.lmap = LogicalMap(os.path.join(
+                "../maps/", self.cfg["MAP_FILE"]))
+            self.gui.setLmap(self.lmap)
+            self.gui.vmap.drawMap(self.lmap)
+            self.cfg["GOAL"] = self.gc["ORIGIN"]
+
+        else:
+            # clear map
+            self.gui.vmap.clear(self.path, self.lmap)
+            if self.fullsearchflag:
+                self.status_bar.set("Redrawing map")
+                self.status_bar.set("Please wait...", right_side=False)
+                for (a, b) in self.coordsets:
+                    self.gui.vmap.clear(a, self.lmap)
+                self.fullsearchflag = False
+                self.status_bar.set("", right_side=False)
+            # resize and reposition
+            self.gui.resetPos()
+            self.gui.resetZoom()
+        # reset vars
+        self.resetVars()
+        self.agent.reset()
+
+        self.gui.setStart(self.cfg["START"])
+        self.gui.setGoal(self.cfg["GOAL"])
+        if self.keptpath:
+            self.gui.vmap.drawSet(self.keptpath, "orange")
+        self.gui.cancelWorkings()
+        self.status_bar.set(msg)
+        self.status_bar.set("", right_side=True)  # clears RIGHT statusbar
+
+    def hdlStop(self):
+        """Button handler. Displays totals."""
+        self.status_bar.set(cost=self.pathcost, no_steps=self.pathsteps,
+                            time_left=self.timeremaining, time_taken=self.pathtime)
+        return (self.pathcost, self.pathsteps, self.timeremaining, self.pathtime)
+
+    def hdlStep(self):
+        """Button handler. Only used for in GUI mode.
+            Performs one step for GUI Step or Search.
+
+           Checks for goal, calls gen to get next step from agent, displays step on map,
+           and updates status bar. If "SPEED" set, inserts delay.
+
+           Note: delay occurs whether called as single step or within
+           continuous search; with step, the delay is unnoticeable because of the time
+           taken to click the button again."""
+        if not self.current == self.cfg["GOAL"] and self.timeremaining:
+            try:
+                if self.timeout < float('inf'):
+                    with Timeout(self.timeout):  # call under SIGNAL
+                        next_return = next(self.gen)
+                else:
+                    next_return = next(self.gen.next)  # call with no SIGNAL
+            except Timeout.Timeout:
+                if self.timeremaining < 0:
+                    self.timeremaining = 0
+                    self.status_bar.set("Timeout!", right_side=False)
+                else:
+                    self.status_bar.set("No path found", right_side=False)
+                self.hdlStop()
+            except:
+                self.status_bar.set(
+                    "Agent returned exception on new step", right_side=False)
+                self.hdlStop()
+            else:  # try/except/else...
+                # does nextreturn include a list of coordinates to draw?
+                if isinstance(next_return[1], (list, tuple)):
+                    next_step, coord_sets = next_return
+                    for coord_set in coord_sets:
+                        if coord_set[1] == 'reset':
+                            self.gui.vmap.clear(coord_set[0], self.lmap)
+                        else:
+                            self.gui.vmap.drawSet(coord_set[0], coord_set[1])
+                    self.gui.setStart(self.cfg["START"])
+                    self.gui.setGoal(self.cfg["GOAL"])
+                    self.fullsearchflag = True
+                    self.coordsets = coord_sets
+                    self.status_bar.set("Plotting path...", right_side=True)
+                else:
+                    # nextreturn just includes the next coordinate, no drawing data
+                    next_step = next_return
+
+                    # Paint path
+                self.gui.vmap.drawSet(self.path, "blue")
+                self.gui.vmap.drawPoint(next_step, "white")
+                self.current = next_step
+                self.path.add(next_step)
+
+                if self.cfg.get("DEADLINE"):
+                    self.status_bar.set(curr_step=next_step, cost=self.pathcost,
+                                        no_steps=self.pathsteps, time_left=self.timeremaining)
+                else:
+                    self.status_bar.set(
+                        curr_step=next_step, cost=self.pathcost, no_steps=self.pathsteps)
+
+                time.sleep(self.cfg.get("SPEED"))  # delay, if any
+
+
+    ################################################################################
+    # MENU HANDLERS FOR THE GUI
+    ################################################################################
+
+    def loadMap(self, mapfile):
+        """
+        Menu handler: File - Open Map. Loads map based on openfiledialog in
+        view. Creates new LogicalMap object and resets based on config
+
+        :type mapfile: string
+        """
+        try:
+            self.status_bar.set("Loading map...")
+            self.lmap = LogicalMap(mapfile)
+
+            # pass new LogicalMap references to Gui and MapCanvas (vmap)
+            self.gui.setLmap(self.lmap)
+            self.gui.vmap.drawMap(self.lmap)
+
+        except:
+            self.status_bar.set("Unable to load map: " + mapfile)
+
+        else:
+            self.processPrefs()
+            # generate random start and goal coordinates
+            x = y = None
+            while x == y:  # make sure start != goal
+                x = self.lmap.generateCoord()
+                y = self.lmap.generateCoord()
+            self.cfg["START"] = x
+            self.cfg["GOAL"] = y
+
+            self.cfg["MAP_FILE"] = os.path.basename(mapfile)
+            msg = "Loaded " + self.cfg["MAP_FILE"]
+            self.hdlReset(msg)
+
+    def setStart(self, start=None):
+        """Menu handler: Search - Reset Start"""
+        if start:
+            self.cfg["START"] = start
+        else:
+            self.cfg["START"] = self.lmap.generateCoord()
+        if self.gui is not None:
+            self.gui.clearStart()
+            self.gui.setStart(self.cfg["START"])
+            self.status_bar.set(f"Start moved to {self.cfg['START']}")
+            # TODO check search not in progress before resetting generator.
+            self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+
+    def setGoal(self, goal=None):
+        """Menu handler: Search - Reset Goal"""
+        if goal:
+            self.cfg["GOAL"] = goal
+        else:
+            self.cfg["GOAL"] = self.lmap.generateCoord()
+        if self.gui is not None:
+            self.gui.clearGoal()
+            self.gui.setGoal(self.cfg["GOAL"])
+            self.status_bar.set(f"Goal moved to {self.cfg['GOAL']}")
+
+    def loadAgent(self, agentpath):
+        """Menu handler: Search - Load Agent. Loads agent based on openfiledialog in
+           view. Also called from readConfig()"""
+        try:
+            agentfile = os.path.basename(agentpath)
+            if agentfile[-3:] == ".py":  # strip extension from agentfile, if present
+                agentfile = agentfile[:-3]
+            else:
+                agentpath = agentpath + ".py"  # add extension to agentpath, if absent
+            # load or reload module
+            agentmod = imp.load_source(agentfile, agentpath)
+            # create Agent and pass in current config settings
+            self.agent = agentmod.Agent()
+            self.agent.reset()
+
+            self.status_bar.set(f"Initialised {agentfile}")
+        except:
+            self.status_bar.set(f"Unable to load {agentfile}")
+            logging.error("Trace-back: \n {}".format(traceback.format_exc()))
+            raise
+        else:
+            self.cfg["AGENT_FILE"] = agentfile
 
 
 if __name__ == '__main__':
