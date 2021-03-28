@@ -275,7 +275,7 @@ class SimController(object):
                 self.gui.setLmap(self.lmap)
                 if not oldmap == self.cfg.get("MAP_FILE"):
                     self.gui.vmap.drawMap(self.lmap)
-                self.hdlReset()  # includes resetVars
+                self.hdl_reset()  # includes resetVars
             else:
                 self.resetVars()  # no attempt to update GUI
 
@@ -559,9 +559,9 @@ class SimController(object):
         """Returns True/False."""
         return self.current == self.cfg["GOAL"]
 
-    def outOfTime(self):
+    def out_of_time(self):
         """Returns True/False."""
-        return (self.time_remaining <= 0)
+        return (self.time_remaining <= 0.0)
 
     def getSettings(self):
         """Getter. Returns current config dictionary"""
@@ -653,7 +653,7 @@ class SimController(object):
     # BUTTON HANDLERS FOR THE GUI
     ################################################################################
 
-    def hdlReset(self, msg="OK"):
+    def hdl_reset(self, msg="OK"):
         """Button handler. Clears map, resets GUI and calls setVars"""
         if self.have_script:
             self.lmap = LogicalMap(os.path.join(
@@ -688,7 +688,7 @@ class SimController(object):
         self.status_bar.set("", right_side=True)  # clears RIGHT statusbar
 
 
-    def hdlStep(self):
+    def hdl_step(self):
         """Button handler. Only used for in GUI mode.
             Performs one step for GUI Step or Search.
 
@@ -707,23 +707,24 @@ class SimController(object):
                         #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
                         next_step = next(self.gen)
                 else:
-                    next_step = next(self.gen.next)  # call with no SIGNAL
+                    next_step = next(self.gen)  # call with no SIGNAL
             except Timeout.Timeout:
-                if self.time_remaining < 0:
-                    self.time_remaining = 0
-                    self.status_bar.set("Timeout!", right_side=False)
-                else:
-                    #TODO: this is strange to recognize no plan via Timeout!
-                    self.status_bar.set("No path found", right_side=False)
+                self.time_remaining = -1.0
+                self.status_bar.set("Time Out!", right_side=True)
+                # else:
+                #     #TODO: this is strange to recognize no plan via Timeout!
+                #     self.status_bar.set("No path found", right_side=False)
                 self.finish_behavior()
             except Exception as e:
                 self.status_bar.set(
                     f"Agent returned exception on new step: {e}", right_side=False)
                 self.finish_behavior()
+                raise e
             else:  # try/except/else...
                 # does nextreturn include a list of coordinates to draw?
-                if isinstance(next_step[1], (list, tuple)):
-                    next_step, coord_sets = next_step
+                next_coord = self._get_coordinate(next_step)
+                coord_sets = self._get_drawing_lists(next_step)
+                if coord_sets:
                     for coord_set in coord_sets:
                         if coord_set[1] == 'reset':
                             self.gui.vmap.clear(coord_set[0], self.lmap)
@@ -734,24 +735,21 @@ class SimController(object):
                     self.fullsearchflag = True
                     self.coord_sets = coord_sets
                     self.status_bar.set("Plotting path...", right_side=True)
-                else:
-                    # nextreturn just includes the next coordinate, no drawing data
-                    next_step = next_step
 
-                    # Paint path
+                # Paint path
                 self.gui.vmap.drawSet(self.path, "blue")
-                self.gui.vmap.drawPoint(next_step, "white")
-                self.current = next_step
-                self.path.add(next_step)
+                self.gui.vmap.drawPoint(next_coord, "white")
+                self.current = next_coord
+                self.path.add(next_coord)
 
                 if self.cfg.get("DEADLINE"):
-                    self.status_bar.set(curr_step=next_step, cost=self.path_cost,
-                                        no_steps=self.path_steps, time_left=self.time_remaining)
+                    self.status_bar.set(curr_step=next_coord, cost=self.path_cost,
+                                        no_steps=self.path_steps, time_left=self.time_remaining, time_taken=self.path_time)
                 else:
                     self.status_bar.set(
-                        curr_step=next_step, cost=self.path_cost, no_steps=self.path_steps)
+                        curr_step=next_step, cost=self.path_cost, no_steps=self.path_steps, time_taken=self.path_time)
 
-                time.sleep(self.cfg.get("SPEED"))  # delay, if any
+                time.sleep(float(self.cfg.get("SPEED")))  # delay, if any
 
     ################################################################################
     # MENU HANDLERS FOR THE GUI
@@ -787,7 +785,7 @@ class SimController(object):
 
             self.cfg["MAP_FILE"] = os.path.basename(mapfile)
             msg = "Loaded " + self.cfg["MAP_FILE"]
-            self.hdlReset(msg)
+            self.hdl_reset(msg)
 
     def setStart(self, start=None):
         """Menu handler: Search - Reset Start"""

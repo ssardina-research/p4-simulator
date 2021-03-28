@@ -238,16 +238,15 @@ class Gui(tkinter.Tk):
         self.searchToggle = True
 
         try:
-            while not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
-                self.simulator.hdlStep()
-            if self.simulator.outOfTime():
+            while not self.simulator.areWeThereYet() and not self.simulator.out_of_time():
+                self.simulator.hdl_step()
+            if self.simulator.out_of_time():
                 self.terminateSearch("Timeout!")
             else:
                 self.terminateSearch("Arrived!")
-        except p4.Timeout.Timeout:
-            raise  p4.Timeout.Timeout()
-        except p4.BadAgentException:
-                self.terminateSearch("Unable to process next step!")
+        except Exception as e:
+            self.terminateSearch(f"Unable to handle next step! --> {e}")
+            print(f"Unable to handle next step! --> {e}")
 
         return
 
@@ -287,7 +286,7 @@ class Gui(tkinter.Tk):
         self._setButtonStates(1, 0, 1, 1, 0)
         self.setStatusR("Paused...")
         self.searchToggle = False
-        self.simulator.hdlStep()
+        self.simulator.hdl_step()
 
     def searchStop(self):
         """Button listener. Cancels 'after' call to search generator, calls SimController's
@@ -303,7 +302,7 @@ class Gui(tkinter.Tk):
         self._setButtonStates(1, 0, 1, 0, 0)
         self.setStatusR("")
         self.searchToggle = False
-        self.simulator.hdlReset()
+        self.simulator.hdl_reset()
 
     def terminateSearch(self, msg):
         """
@@ -406,8 +405,8 @@ class Gui(tkinter.Tk):
         """
         #window
         self.title('p4 Path Planning Simulator')
-        w, h = self.winfo_screenwidth() - 250, self.winfo_screenheight() - 200
-        
+        w, h = self.winfo_screenwidth() - 250, self.winfo_screenheight() - 180
+
         # set size of window based on the map
         w, h = self.lmap.width + 50, self.lmap.height + 100
         self.geometry("%dx%d+0+0" % (w, h))
