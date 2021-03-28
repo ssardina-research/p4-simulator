@@ -94,7 +94,7 @@ class Gui(tkinter.Tk):
         if event.char == "s" or event.char == "S":
             self.searchtoggle = not self.searchtoggle
             if self.searchtoggle:
-                self.searchStart()
+                self.hdl_play()
             else:
                 self.searchPause()
 
@@ -224,7 +224,7 @@ class Gui(tkinter.Tk):
         return x == 'ok'
 
     # BUTTON LISTENERS
-    def searchStart(self):
+    def hdl_play(self):
         """
         Button listener.  This is used only on GUI mode.
 
@@ -240,11 +240,12 @@ class Gui(tkinter.Tk):
         try:
             while not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
                 self.simulator.hdlStep()
-                print(self.simulator.time_remaining)
             if self.simulator.outOfTime():
                 self.terminateSearch("Timeout!")
             else:
                 self.terminateSearch("Arrived!")
+        except p4.Timeout.Timeout:
+            raise  p4.Timeout.Timeout()
         except p4.BadAgentException:
                 self.terminateSearch("Unable to process next step!")
 
@@ -309,8 +310,8 @@ class Gui(tkinter.Tk):
         Cancels after call to search generator, resets button states, displays msg,
            cancels signal - in case of timeout - and calls SimController's hdlStop
         """
-        self.after_cancel(self.searchjob)
-        print('estmosssssss')
+        # I removed this March 28, 2021, not sure why it is needed... :-)
+        # self.after_cancel(self.searchjob)
         self._setButtonStates(0, 0, 0, 0, 1)
         self.setStatusR(msg)
         self.searchToggle = False
@@ -440,7 +441,7 @@ class Gui(tkinter.Tk):
 
         #toolbar
         toolbar = tkinter.Frame(self, borderwidth=1, relief='raised')
-        self.btnSearch = tkinter.Button(toolbar, text="Play", relief='flat', command=self.searchStart,
+        self.btnSearch = tkinter.Button(toolbar, text="Play", relief='flat', command=self.hdl_play,
                                         state=tkinter.NORMAL)
         self.btnSearch.pack(side='left', padx=2, pady=2)
         self.btnPause = tkinter.Button(toolbar, text="Pause", relief='flat', command=self.searchPause,

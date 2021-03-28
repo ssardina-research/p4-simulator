@@ -17,13 +17,15 @@
 
 from tkinter import Canvas, PhotoImage, BOTH, NW, TclError
 
+from p4_model import LogicalMap
+
 
 class MapCanvas(Canvas):
     """
     Visual representation of map instantiated as a Tkinter.Canvas object.
     """
 
-    def __init__(self, parent, top, lmap):
+    def __init__(self, parent, top, lmap : LogicalMap):
         """Constructor. Initialises class attributes, calls drawMap. parent = mapcontainer
            created in Gui. Ref to Gui (top) supplied in case needed for future use."""
         Canvas.__init__(self, parent, width=512, height=512)
@@ -80,7 +82,7 @@ class MapCanvas(Canvas):
             'D': 'red'
         }[char]
 
-    def drawMap(self, lmap):
+    def drawMap(self, lmap : LogicalMap):
         """Creates new map image based on LogicalMap passed in lmap"""
         w = lmap.width
         h = lmap.height
@@ -95,26 +97,26 @@ class MapCanvas(Canvas):
                 elif lmap.isDoor((col, row)):
                     color = 'red'
                 else:
-                    color = self.colorMap(lmap.getCell((col, row)))
+                    color = self.colorMap(lmap.get_cell_type((col, row)))
                 self.im.put(color, (col, row))
         self.original = self.create_image(0, 0, image=self.im, anchor=NW)
 
-    def clear(self, points, lmap):
+    def clear(self, points, lmap : LogicalMap):
         """Clears set of points by replacing each point with its original color,
            based on data in lmap"""
         for coord in points:
             if lmap.cellWithinBoundaries(coord):
-                color = self.colorMap(lmap.getCell(coord))
+                color = self.colorMap(lmap.get_cell_type(coord))
                 self.im.put(color, coord)
         self.zoomMap(self.scale)
 
-    def clearCross(self, coord, lmap):
+    def clearCross(self, coord, lmap : LogicalMap):
         """Clears cross at coord by replacing each point with its original color,
            based on data in lmap"""
         for n in range(-3, 3):
-            color = self.colorMap(lmap.getCell((coord[0] + n, coord[1] + n)))
+            color = self.colorMap(lmap.get_cell_type((coord[0] + n, coord[1] + n)))
             self._drawPoint(color, (coord[0] + n, coord[1] + n))
-            color = self.colorMap(lmap.getCell((coord[0] + n, coord[1] - n)))
+            color = self.colorMap(lmap.get_cell_type((coord[0] + n, coord[1] - n)))
             self._drawPoint(color, (coord[0] + n, coord[1] - n))
         self.zoomMap(self.scale)
 

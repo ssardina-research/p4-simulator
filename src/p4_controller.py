@@ -187,7 +187,7 @@ class SimController(object):
         if self.cfg.get("GUI"):
             self.initGui()
         else:
-            self.search()
+            self.search_offline()
 
     def processMap(self):
         # may throw BadMapException
@@ -330,16 +330,16 @@ class SimController(object):
 
         self.gui.mainloop()  # start TK main loop
 
-    def search(self):
+    def search_offline(self):
         """Performs command line search by calls to generator 
-        
+
         This is the main function when P4 is called offline without GUI
-        
+
         We really do not care here about each step as they are not displayed;
         just that they are returned and the goal is reached on time
         """
         self.status_bar.set("Executing simulation...")
-        next_step = self.cfg["START"]
+        next_coord = self.cfg["START"]
 
         # TODO: new timeout way taken from PACMAN, not working yet
         # # keep generating next steps as long as goal not in goal & enough time
@@ -361,21 +361,24 @@ class SimController(object):
         #         break
 
         # keep generating next steps as long as goal not in goal & enough time
-        while not self.cfg["GOAL"] == next_step and self.time_remaining:
+        while not self.cfg["GOAL"] == next_coord and self.time_remaining:
             try:
                 # Don't set signal for infinite time
-                if self.timeout < float('inf'):
-                    with Timeout(self.timeout):  # call under SIGNAL
-                        move = next(self.gen)   # this yields the next coordinate to move to
-                        next_step = self._get_coordinate(move)
+                if self.time_remaining < float('inf'):
+                    with Timeout(self.time_remaining):  # call under SIGNAL
+                        # get the next step from the agent; either:
+                        #  (x, y): next step from the agent
+                        #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
+                        next_step = next(self.gen)   # this yields the next coordinate to move to
+                        next_coord = self._get_coordinate(next_step)
                 else: # call with no SIGNAL
-                    next_step = self._get_coordinate(next(self.gen))
+                    next_coord = self._get_coordinate(next(self.gen))
             except Timeout.Timeout:
                 self.time_remaining = -1
                 self.status_bar.set("Timed Out!")
                 break
             except:
-                self.status_bar.set(f"Agent returned {next_step}")
+                self.status_bar.set(f"Agent returned {next_coord}")
                 logging.error(
                     "Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
@@ -625,7 +628,7 @@ class SimController(object):
                     try:
                         self.agent.reset()
                         self.resetVars()
-                        total_cost, total_steps, time_left, time_taken = self.search()
+                        total_cost, total_steps, time_left, time_taken = self.search_offline()
                         times_taken.append(float(time_taken))
                         steps_taken.append(total_steps)
                         costs_taken.append(float(total_cost))
@@ -697,26 +700,30 @@ class SimController(object):
            taken to click the button again."""
         if not self.current == self.cfg["GOAL"] and self.time_remaining:
             try:
-                if self.timeout < float('inf'):
-                    with Timeout(self.timeout):  # call under SIGNAL
-                        next_return = next(self.gen)
+                if self.time_remaining < float('inf'):
+                    with Timeout(self.time_remaining):  # call under SIGNAL
+                        # get the next step from the agent; either:
+                        #  (x, y): next step from the agent
+                        #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
+                        next_step = next(self.gen)
                 else:
-                    next_return = next(self.gen.next)  # call with no SIGNAL
+                    next_step = next(self.gen.next)  # call with no SIGNAL
             except Timeout.Timeout:
                 if self.time_remaining < 0:
                     self.time_remaining = 0
                     self.status_bar.set("Timeout!", right_side=False)
                 else:
+                    #TODO: this is strange to recognize no plan via Timeout!
                     self.status_bar.set("No path found", right_side=False)
                 self.finish_behavior()
-            except:
+            except Exception as e:
                 self.status_bar.set(
-                    "Agent returned exception on new step", right_side=False)
+                    f"Agent returned exception on new step: {e}", right_side=False)
                 self.finish_behavior()
             else:  # try/except/else...
                 # does nextreturn include a list of coordinates to draw?
-                if isinstance(next_return[1], (list, tuple)):
-                    next_step, coord_sets = next_return
+                if isinstance(next_step[1], (list, tuple)):
+                    next_step, coord_sets = next_step
                     for coord_set in coord_sets:
                         if coord_set[1] == 'reset':
                             self.gui.vmap.clear(coord_set[0], self.lmap)
@@ -729,7 +736,7 @@ class SimController(object):
                     self.status_bar.set("Plotting path...", right_side=True)
                 else:
                     # nextreturn just includes the next coordinate, no drawing data
-                    next_step = next_return
+                    next_step = next_step
 
                     # Paint path
                 self.gui.vmap.drawSet(self.path, "blue")
