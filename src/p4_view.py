@@ -220,7 +220,7 @@ class Gui(tkinter.Tk):
 
     def mBox(self, msg):
         """Displays message in dialog box. Returns True when user clicks OK"""
-        x = tkMessageBox.showinfo(message=msg)
+        x = tkinter.messagebox.showinfo(message=msg)
         return x == 'ok'
 
     # BUTTON LISTENERS
