@@ -148,7 +148,7 @@ class SimController(object):
         # we distinguish 3 modes - config file, CLI or batch
         if cfgfile is not None:
             self.readConfig()
-            self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+            self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
         elif self.cfg["BATCH"] is not None:
             try:
                 self.runBatch(*self.cfg["BATCH"])
@@ -311,7 +311,7 @@ class SimController(object):
             self.have_script = False
 
         # reconfigure generator based on current config
-        self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+        self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
 
     def initGui(self):
         """
@@ -441,18 +441,17 @@ class SimController(object):
             self.gui.cancelWorkings()
         self.fullsearchflag = False
 
-    def stepGenerator(self, curr_coord, goal_coord):
+    def step_generator(self, curr_coord, goal_coord):
         """This is the MAIN step generator, which will be referenced via self.gen
+        p4 uses this same generator for CLI and GUI search.
 
         Because this is a generator, each step will be retrieved via next(self.gen)
 
         Passes mapref, currentpos, goal, timeremaining to Agent
         Retrieves and yields next step on search path.
 
-        Note: gen maintains state for supplied coordinates but updates pathCost,
-        pathSteps, pathTime and timeremaining.
-
-        p4 uses this same generator for CLI and GUI search.
+        Maintains state for supplied coordinates 
+        but updates path_cost, path_steps, path_time and time_remaining in self.
 
         :param curr_coord: Current position.
         :type curr_coord: (int, int)
@@ -508,7 +507,7 @@ class SimController(object):
                 step_time = (clock_end - clock_start)
 
             # save previous coord and extract next one (and optional drawing lists)
-            prev_coord = curr_coord 
+            prev_coord = curr_coord
             curr_coord = self._get_coordinate(next_step)
             drawing_lists = self._get_drawing_lists(next_step)  # may be None
 
@@ -540,6 +539,10 @@ class SimController(object):
                     cost_step = 0
 
             self.path_cost += cost_step
+
+            # Handle case when the step was done, but overall time was exceeded anyways
+            if self.time_remaining < 0:
+                raise Timeout.Timeout()
 
             yield next_step
 
@@ -790,7 +793,7 @@ class SimController(object):
             self.gui.setStart(self.cfg["START"])
             self.status_bar.set(f"Start moved to {self.cfg['START']}")
             # TODO check search not in progress before resetting generator.
-            self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
+            self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
 
     def setGoal(self, goal=None):
         """Menu handler: Search - Reset Goal"""
