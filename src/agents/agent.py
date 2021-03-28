@@ -9,6 +9,9 @@ class AgentP4(ABC):
 
     def getNext(lmap, current, target, timeremaining):
         """Return the next step of the agent"""
+        # should return either:
+        #   (x, y): next step from the agent
+        #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
     pass
 
     # def getWorkings():

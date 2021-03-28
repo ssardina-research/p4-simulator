@@ -49,6 +49,7 @@ class Agent(AgentP4):
            thereafter yields the next step in the path.
         """
         # print("Planning in progress....")
+        
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
         reverse_path = list(reversed(self.path[:len(self.path)-1]))
 
@@ -62,6 +63,7 @@ class Agent(AgentP4):
                (zip(*self.openlist)[2], p4.COL_OL), (self.path, p4.COL_PP))
             index_start = 0
 
+        yield reverse_path[0]
         for move in reverse_path[index_start:]:
             self.nextmove = move
             yield move

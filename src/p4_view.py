@@ -240,7 +240,7 @@ class Gui(tkinter.Tk):
         try:
             while not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
                 self.simulator.hdlStep()
-                print(self.simulator.timeremaining)
+                print(self.simulator.time_remaining)
             if self.simulator.outOfTime():
                 self.terminateSearch("Timeout!")
             else:
@@ -295,7 +295,7 @@ class Gui(tkinter.Tk):
         self._setButtonStates(0, 0, 0, 0, 1)
         self.setStatusR("Stopped.")
         self.searchToggle = False
-        self.simulator.hdlStop()
+        self.simulator.finish_behavior()
 
     def searchReset(self):
         """Button listener. Resets buttons and calls simulator's hdlReset function."""
@@ -318,7 +318,7 @@ class Gui(tkinter.Tk):
             signal.alarm(0)  # cancel signal
         except AttributeError:
             pass
-        self.simulator.hdlStop()
+        self.simulator.finish_behavior()
 
     def _setButtonStates(self, sea=0, pau=0, ste=0, sto=0, res=0):
         """Internal. Lets button listeners enable/disable button states as required"""

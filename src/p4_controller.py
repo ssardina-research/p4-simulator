@@ -123,8 +123,8 @@ class SimController(object):
         self.agent: AgentP4 = None  # Ref to Agent object
         self.gen = None  # Ref to step generator
         self.current = None  # current search coordinates
-        self.pathcost, self.pathsteps, self.pathtime = 0, 0, 0
-        self.timeremaining = float('inf')
+        self.path_cost, self.path_steps, self.path_time = 0, 0, 0
+        self.time_remaining = float('inf')
         self.timeout = float('inf')
 
         self.status_bar = StatusBar("Status bar initialized")
@@ -135,11 +135,15 @@ class SimController(object):
         self.path = set()  # set of all coordinates displayed as part of path
         self.keptpath = None
         self.fullsearchflag = False  # set to True if map is populated with extra coords
-        self.coordsets = None  # sets of coordinates that will need to be reset
+        self.coord_sets = None  # sets of coordinates that will need to be reset
 
         self.cfg = args  # Default params as modified via CLI
-        self.gotscript = False
+
+        self.have_script = False
         self.script = {}  # Allows for dynamic changes
+        self.terrain_changes = None
+        self.agent_changes = None
+        self.goal_changes = None
 
         # we distinguish 3 modes - config file, CLI or batch
         if cfgfile is not None:
@@ -166,8 +170,8 @@ class SimController(object):
                 self.processPrefs()  # passes heuristic and deadline preferences to model
                 self.resetVars()
 
-            except p4.BadAgentException:
-                logging.error("Bad Agent. Irrecoverable error. Terminating...")
+            except p4.BadAgentException as e:
+                logging.error(f"Bad Agent. Irrecoverable error: {e}")
                 raise SystemExit()
 
             except p4.BadMapException:
@@ -233,7 +237,7 @@ class SimController(object):
             logging.info("Agent to be used: {}".format(agentfile))
             self.loadAgent(agentfile)
         except:
-            raise p4.BadAgentException()
+            raise p4.BadAgentException("Error loading the agent")
 
     def readConfig(self):
         """
@@ -278,9 +282,9 @@ class SimController(object):
         except p4.BadMapException:
             self.status_bar.set(
                 f"Unable to load map: {self.cfg.get('MAP_FILE')}")
-        except p4.BadAgentException:
+        except p4.BadAgentException as e:
             self.status_bar.set(
-                f"Unable to load agent: {self.cfg.get('AGENT_FILE')}")
+                f"Problem loading agent {self.cfg.get('AGENT_FILE')}: {e}")
         except:
             # unexpected error
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
@@ -288,23 +292,23 @@ class SimController(object):
 
     def resetVars(self):
         """Resets tracked variables based on current self.cfg settings"""
-        self.pathcost, self.pathsteps, self.pathtime = 0, 0, 0
+        self.path_cost, self.path_steps, self.path_time = 0, 0, 0
         self.path.clear()
-        self.timeremaining = self.cfg.get("DEADLINE")
+        self.time_remaining = self.cfg.get("DEADLINE")
         # if a DEADLINE has been set, timeout will occur at 2* that DEADLINE if Agent
         # fails to return result (Unix only)
-        if not self.timeremaining:
-            self.timeremaining = float("inf")
+        if not self.time_remaining:
+            self.time_remaining = float("inf")
             self.timeout = float("inf")
         else:
-            self.timeout = self.timeremaining * 2
+            self.timeout = self.time_remaining
         self.current = self.cfg["START"]
 
         # check for script file and load if it exists
         if self.cfg["DYNAMIC"] is True:
             self.loadScript()  # sets self.gotscript
-        elif self.gotscript is True:
-            self.gotscript = False
+        elif self.have_script is True:
+            self.have_script = False
 
         # reconfigure generator based on current config
         self.gen = self.stepGenerator(self.cfg["START"], self.cfg["GOAL"])
@@ -327,43 +331,70 @@ class SimController(object):
         self.gui.mainloop()  # start TK main loop
 
     def search(self):
-        """Performs command line search by calls to generator """
+        """Performs command line search by calls to generator 
+        
+        This is the main function when P4 is called offline without GUI
+        
+        We really do not care here about each step as they are not displayed;
+        just that they are returned and the goal is reached on time
+        """
         self.status_bar.set("Executing simulation...")
         next_step = self.cfg["START"]
 
+        # TODO: new timeout way taken from PACMAN, not working yet
+        # # keep generating next steps as long as goal not in goal & enough time
+        # while not self.cfg["GOAL"] == next_step and self.timeremaining:
+        #     try:
+        #         # Don't set signal for infinite time
+        #         if self.timeout < float('inf'):
+        #             timed_func = p4.TimeoutFunction(next(self.gen), self.timeout)
+        #         result = timed_func()
+        #         next_step = self._get_coordinate(result)
+        #     except p4.TimeoutFunctionException:
+        #         self.timeremaining = 0
+        #         self.status_bar.set("Timed Out!")
+        #     except:
+        #         self.status_bar.set(f"Agent returned {next_step}")
+        #         logging.error(
+        #             "Trace-back: \n {}".format(traceback.format_exc()))
+        #         raise SystemExit()
+        #         break
+
         # keep generating next steps as long as goal not in goal & enough time
-        while not self.cfg["GOAL"] == next_step and self.timeremaining:
+        while not self.cfg["GOAL"] == next_step and self.time_remaining:
             try:
                 # Don't set signal for infinite time
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
-                        next_step = self._get_coordinate(next(self.gen))
-                else:
-                    next_step = self._get_coordinate(
-                        next(self.gen))  # call with no SIGNAL
+                        move = next(self.gen)   # this yields the next coordinate to move to
+                        next_step = self._get_coordinate(move)
+                else: # call with no SIGNAL
+                    next_step = self._get_coordinate(next(self.gen))
             except Timeout.Timeout:
-                self.timeremaining = 0
+                self.time_remaining = -1
                 self.status_bar.set("Timed Out!")
+                break
             except:
                 self.status_bar.set(f"Agent returned {next_step}")
                 logging.error(
                     "Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
                 break
-        return self.hdlStop()  # (totalcost, pathsteps, timeremaining, pathtime)
+        return self.finish_behavior()  # (totalcost, pathsteps, timeremaining, pathtime)
 
-    # just keep the first argument of a nextstep, and drop any possible argument for drawing lists
-    def _get_coordinate(self, nextstep):
-        # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
-        if isinstance(nextstep[1], (list, tuple)):
-            return nextstep[0]
+    def _get_coordinate(self, next_step):
+        """Keep the first argument of a next step, and drop any possible argument for drawing lists
+            nex_step = (x,y) or nextstep = ((x, y), (list1, list2, list3))
+        """
+        if isinstance(next_step[1], (list, tuple)):
+            return next_step[0]
         else:
-            return nextstep
+            return next_step
 
-    # just keep the second argument of a nextstep (the list for drawings), and drop the coordinate
     def _get_drawing_lists(self, nextstep):
-        # nexstep = (x,y) or nextstep = ((x,y), (list1,list2,list3))
-        # is the second part of nextstep (list1,list2,list3)? If so, just keep the coordinate argument
+        """Keep the second argument of a next step (the list for drawings), and drop the coordinate
+            nex_step = (x,y) or nextstep = ((x, y), (list1, list2, list3))
+        """
         if isinstance(nextstep[1], (list, tuple)):
             return nextstep[1]
         else:
@@ -394,12 +425,12 @@ class SimController(object):
             # redraw start and goal on top
             self.gui.setStart(self.cfg["START"])
             self.gui.setGoal(self.cfg["GOAL"])
-            self.coordsets = coordsets
+            self.coord_sets = coordsets
             self.fullsearchflag = True
 
     def hideWorkings(self):
         if self.fullsearchflag:
-            for (a, b) in self.coordsets:
+            for (a, b) in self.coord_sets:
                 took_action = True
                 self.gui.vmap.clear(a, self.lmap)
             if self.keptpath:
@@ -410,9 +441,11 @@ class SimController(object):
             self.gui.cancelWorkings()
         self.fullsearchflag = False
 
-    def stepGenerator(self, current, target):
-        """
-        Generator referenced by self.gen
+    def stepGenerator(self, curr_coord, goal_coord):
+        """This is the MAIN step generator, which will be referenced via self.gen
+
+        Because this is a generator, each step will be retrieved via next(self.gen)
+
         Passes mapref, currentpos, goal, timeremaining to Agent
         Retrieves and yields next step on search path.
 
@@ -421,18 +454,23 @@ class SimController(object):
 
         p4 uses this same generator for CLI and GUI search.
 
-        :param current: Current position.
-        :type current: (int, int)
-        :param target: Target position.
-        :type target: (int,int)
-        :rtype : (int,int)
+        :param curr_coord: Current position.
+        :type curr_coord: (int, int)
+        :param goal_coord: Target position.
+        :type goal_coord: (int,int)
+        :rtype : (int,int) or ((int, int) (list1, list2,list3))
         """
 
+        # list of all the keys available
+        all_keys = [k for k in self.lmap.key_and_doors.keys()]
+
         while True:
-            target = self.cfg["GOAL"]
-            if self.gotscript:
-                if self.pathsteps in self.tc:
-                    terrain, topleft, botright = self.tc.get(self.pathsteps)
+            #TODO: rework this. First goal_coord param is useless. second self.cfg["GOAL"] is overwritten by script; not nice done all
+            #TODO: self.cfg["GOAL"] should stay unchanged and current goal should be in self.goal 
+            goal_coord = self.cfg["GOAL"]
+            if self.have_script:  # there is a script for dynamic changes
+                if self.path_steps in self.terrain_changes:
+                    terrain, topleft, botright = self.terrain_changes.get(self.path_steps)
                     pointlist = p4.getBlock(topleft, botright)
                     # change logical map
                     self.lmap.setPoints(terrain, pointlist)
@@ -441,66 +479,75 @@ class SimController(object):
                         self.gui.clearPoints(pointlist)
                     except:
                         pass
-                if self.pathsteps in self.gc:
-                    target = self.lmap.nearestPassable(
-                        self.gc.get(self.pathsteps))
-                    self.setGoal(target)
-                if self.pathsteps in self.ac:
+                if self.path_steps in self.goal_changes:
+                    goal_coord = self.lmap.nearestPassable(
+                        self.goal_changes.get(self.path_steps))
+                    self.setGoal(goal_coord)
+                if self.path_steps in self.agent_changes:
                     newpos = p4.addVectors(
-                        current, self.ac.get(self.pathsteps))
-                    current = self.lmap.nearestPassable(newpos)
+                        curr_coord, self.agent_changes.get(self.path_steps))
+                    curr_coord = self.lmap.nearestPassable(newpos)
                     yield newpos  # scripted move is not costed or counted
-            try:
-                clockstart = time.process_time()
-                next_cell = self.agent.getNext(
-                    self.lmap, current, target, self.timeremaining)  # pair (x, y) to move
-                clockend = time.process_time()
-                logging.debug(next_cell)
-            except:
-                raise p4.BadAgentException()
+            try:    # produce new agent step via agent getNext()
+                clock_start = time.process_time()
+                # get the next step from the agent; either:
+                #  (x, y): next step from the agent
+                #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
+                next_step = self.agent.getNext(
+                    self.lmap, curr_coord, goal_coord, self.time_remaining)
+                clock_end = time.process_time()
+                logging.debug(next_step)
+            except p4.BadAgentException:
+                raise p4.BadAgentException("Agent problem while computing next step")
 
-            # Only time first step unless operating in 'realtime' mode. If this is realtime, and the step involved no reasoning (took less than FREE_TIME) do not count its time
-            if (not self.cfg.get("REALTIME") and self.pathtime) or (clockend - clockstart) < self.cfg.get("FREE_TIME"):
-                steptime = 0
+            # Only time the first step, unless operating in 'realtime' mode. 
+            # If this is realtime, and the step involved no reasoning (took less than FREE_TIME) do not count its time
+            if (not self.cfg.get("REALTIME") and self.path_time) or (clock_end - clock_start) < self.cfg.get("FREE_TIME"):
+                step_time = 0
             else:
-                steptime = (clockend - clockstart)
-            previous = current
+                step_time = (clock_end - clock_start)
 
-            # Agent may have returned single step or step plus sets of coords and colors.
-            # Try/except distinguishes between them
-            try:
-                x = next_cell[1][0]  # fails if nextreturn is coord only
-                current, configsets = next_cell
-            except TypeError:
-                current = next_cell
-            finally:
-                self.pathsteps += 1
-                self.pathtime += steptime
-                self.timeremaining -= steptime
+            # save previous coord and extract next one (and optional drawing lists)
+            prev_coord = curr_coord 
+            curr_coord = self._get_coordinate(next_step)
+            drawing_lists = self._get_drawing_lists(next_step)  # may be None
 
-                # We now consider every door open. In fact, we are just computing the final path cost, we are not
-                # searching for it. So is reasonable to assume that I have all the keys along the path.
-                allkeys = [k for k in self.lmap.key_and_doors.keys()]
-                cost = self.lmap.getCost(current, previous, allkeys)
-                # self.pathcost += self.lmap.getCost(current, previous, allkeys)
-                if not self.lmap.isAdjacent(current, previous):
-                    cost = float('inf')
-                # agent has made illegal move:
-                if cost == float('inf'):
-                    self.status_bar.set(
-                        f"Illegal move at {current} : {self.lmap.getCost(current)}", right_side=True)
-                    if self.cfg["STRICT"]:
-                        current = previous
-                        next_cell = previous
-                        self.pathsteps -= 1
-                        cost = 0
-                self.pathcost += cost
-            yield next_cell
+            # update tracking vars
+            self.path_steps += 1
+            self.path_time += step_time
+            self.time_remaining -= step_time
 
+            # Calculate cost of the step from prev_cell to next_cell
+            #   This already handles adjacent cells and key holding on doors
+            #
+            # Assume agent has all the keys (so that we assume every door open). 
+            # In fact, we are just computing the final path cost, we are not
+            # searching for it. So is reasonable to assume that I have all the keys along the path.
+            # TODO: this does not seem correct, we must be building the set of keys as we traverse the steps
+            cost_step = self.lmap.getCost(curr_coord, prev_coord, all_keys)
 
+            # Agent has made illegal move (e.g., non-adjacent or non-traversable cell, no key for door)
+            if cost_step == float('inf'):
+                self.status_bar.set(
+                    f"Illegal move to {curr_coord} : {self.lmap.getCost(curr_coord)}", right_side=True)
 
+                # force strict true dynamics: agent must stay in same place; no cost
+                # if non-strict, step will be allowed (though will have infinite cost)
+                if self.cfg["STRICT"]:  
+                    curr_coord = prev_coord
+                    next_step = prev_coord  # drop drawing lists (if they were returned for step)
+                    self.path_steps -= 1
+                    cost_step = 0
 
+            self.path_cost += cost_step
 
+            yield next_step
+
+    def finish_behavior(self):
+        """Called when agent run is finished to report (in status bar) and return totals"""
+        self.status_bar.set(cost=self.path_cost, no_steps=self.path_steps,
+                            time_left=self.time_remaining, time_taken=self.path_time)
+        return (self.path_cost, self.path_steps, self.time_remaining, self.path_time)
 
     def areWeThereYet(self):
         """Returns True/False."""
@@ -508,7 +555,7 @@ class SimController(object):
 
     def outOfTime(self):
         """Returns True/False."""
-        return (self.timeremaining <= 0)
+        return (self.time_remaining <= 0)
 
     def getSettings(self):
         """Getter. Returns current config dictionary"""
@@ -519,11 +566,11 @@ class SimController(object):
             # execfile('script.py', self.script)
             exec(open("./script.py").read(), self.script)
 
-            self.gc = self.script.get("GOAL_CHANGE")
-            self.gc["ORIGIN"] = self.cfg["GOAL"]  # save in case of reset
-            self.tc = self.script.get("TERRAIN_CHANGE")
-            self.ac = self.script.get("AGENT_CHANGE")
-            self.gotscript = True
+            self.goal_changes = self.script.get("GOAL_CHANGE")
+            self.goal_changes["ORIGIN"] = self.cfg["GOAL"]  # save in case of reset
+            self.terrain_changes = self.script.get("TERRAIN_CHANGE")
+            self.agent_changes = self.script.get("AGENT_CHANGE")
+            self.have_script = True
             self.status_bar.set("Loaded script")
         except:  # we don't care why it failed
             self.status_bar.set("Failed to load script.py")
@@ -596,19 +643,18 @@ class SimController(object):
                     [self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, total_cost,
                      total_steps, time_taken, quality])
 
-
     ################################################################################
     # BUTTON HANDLERS FOR THE GUI
     ################################################################################
 
     def hdlReset(self, msg="OK"):
         """Button handler. Clears map, resets GUI and calls setVars"""
-        if self.gotscript:
+        if self.have_script:
             self.lmap = LogicalMap(os.path.join(
                 "../maps/", self.cfg["MAP_FILE"]))
             self.gui.setLmap(self.lmap)
             self.gui.vmap.drawMap(self.lmap)
-            self.cfg["GOAL"] = self.gc["ORIGIN"]
+            self.cfg["GOAL"] = self.goal_changes["ORIGIN"]
 
         else:
             # clear map
@@ -616,7 +662,7 @@ class SimController(object):
             if self.fullsearchflag:
                 self.status_bar.set("Redrawing map")
                 self.status_bar.set("Please wait...", right_side=False)
-                for (a, b) in self.coordsets:
+                for (a, b) in self.coord_sets:
                     self.gui.vmap.clear(a, self.lmap)
                 self.fullsearchflag = False
                 self.status_bar.set("", right_side=False)
@@ -635,11 +681,6 @@ class SimController(object):
         self.status_bar.set(msg)
         self.status_bar.set("", right_side=True)  # clears RIGHT statusbar
 
-    def hdlStop(self):
-        """Button handler. Displays totals."""
-        self.status_bar.set(cost=self.pathcost, no_steps=self.pathsteps,
-                            time_left=self.timeremaining, time_taken=self.pathtime)
-        return (self.pathcost, self.pathsteps, self.timeremaining, self.pathtime)
 
     def hdlStep(self):
         """Button handler. Only used for in GUI mode.
@@ -651,7 +692,7 @@ class SimController(object):
            Note: delay occurs whether called as single step or within
            continuous search; with step, the delay is unnoticeable because of the time
            taken to click the button again."""
-        if not self.current == self.cfg["GOAL"] and self.timeremaining:
+        if not self.current == self.cfg["GOAL"] and self.time_remaining:
             try:
                 if self.timeout < float('inf'):
                     with Timeout(self.timeout):  # call under SIGNAL
@@ -659,16 +700,16 @@ class SimController(object):
                 else:
                     next_return = next(self.gen.next)  # call with no SIGNAL
             except Timeout.Timeout:
-                if self.timeremaining < 0:
-                    self.timeremaining = 0
+                if self.time_remaining < 0:
+                    self.time_remaining = 0
                     self.status_bar.set("Timeout!", right_side=False)
                 else:
                     self.status_bar.set("No path found", right_side=False)
-                self.hdlStop()
+                self.finish_behavior()
             except:
                 self.status_bar.set(
                     "Agent returned exception on new step", right_side=False)
-                self.hdlStop()
+                self.finish_behavior()
             else:  # try/except/else...
                 # does nextreturn include a list of coordinates to draw?
                 if isinstance(next_return[1], (list, tuple)):
@@ -681,7 +722,7 @@ class SimController(object):
                     self.gui.setStart(self.cfg["START"])
                     self.gui.setGoal(self.cfg["GOAL"])
                     self.fullsearchflag = True
-                    self.coordsets = coord_sets
+                    self.coord_sets = coord_sets
                     self.status_bar.set("Plotting path...", right_side=True)
                 else:
                     # nextreturn just includes the next coordinate, no drawing data
@@ -694,14 +735,13 @@ class SimController(object):
                 self.path.add(next_step)
 
                 if self.cfg.get("DEADLINE"):
-                    self.status_bar.set(curr_step=next_step, cost=self.pathcost,
-                                        no_steps=self.pathsteps, time_left=self.timeremaining)
+                    self.status_bar.set(curr_step=next_step, cost=self.path_cost,
+                                        no_steps=self.path_steps, time_left=self.time_remaining)
                 else:
                     self.status_bar.set(
-                        curr_step=next_step, cost=self.pathcost, no_steps=self.pathsteps)
+                        curr_step=next_step, cost=self.path_cost, no_steps=self.path_steps)
 
                 time.sleep(self.cfg.get("SPEED"))  # delay, if any
-
 
     ################################################################################
     # MENU HANDLERS FOR THE GUI

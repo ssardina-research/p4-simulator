@@ -36,19 +36,21 @@ class LogicalMap(object):
         DEFAULT_HEIGHT = 512
         DEFAULT_WIDTH = 512
         self.uniform = True
-        
+
         self.cellWithinBoundaries = self.isMapped  # for backward compatibility
 
         self.neighbours = []
 
         # terrain types and default costs as per http://movingai.com/benchmarks/formats.html
         # water is untraversable in general, unless coming from water itself (see below)
-        self.terrains = {"ground" : "G", "ground1" : ".", "water" : "W", "swamp" : "S", "tree" : "T"}
-        self.costs = {".": 1, "G": 1, "0": float('inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": 1}
-                      
+        self.terrains = {"ground": "G", "ground1": ".",
+                         "water": "W", "swamp": "S", "tree": "T"}
+        self.costs = {".": 1, "G": 1, "0": float(
+            'inf'), "@": float('inf'), "S": 1, "T": float('inf'), "W": 1}
+
         # dictionary to hold precalculated costs for straight and diagonal moves between terrain types
         self.mixedmatrix = {}
-        
+
         self.neighbourDic = {}
 
         # Each key is store in the map as (key_location) : [ d1, d2, ... ] where d1, d2, ... are the location of
@@ -68,25 +70,25 @@ class LogicalMap(object):
                            for row in range(DEFAULT_HEIGHT)]
             self.info = {"height": DEFAULT_HEIGHT, "width": DEFAULT_WIDTH}
             self.costs["."] = 1
-            self.mixedmatrix[".",".",True] = self.SQRT2
-            self.mixedmatrix[".",".",False] = 1
-            
+            self.mixedmatrix[".", ".", True] = self.SQRT2
+            self.mixedmatrix[".", ".", False] = 1
+
         # Default method calls. If getH() is called, by default run _octile(), etc.
         # n.b. these settings only retained when p4_model is called from free-standing scripts,
         # that is, outside p4_controller.
         self.getH = self._octile
         self.setCostModel()
         self.setDiagonal()
-            
+
     def _getDiffAdjs(self, coord):
         """returns adjacents with different cost from cell passed in as coord
         :type coord: tuple
         """
         diffs = []
-        cost = self.costs[self.getCell(coord)]
+        cost = self.costs[self.get_cell_type(coord)]
         adjlist = self.getAdjacents(coord)
         for adj in adjlist:
-            if not self.costs[self.getCell(adj)] == cost:
+            if not self.costs[self.get_cell_type(adj)] == cost:
                 diffs.append(adj)
         return diffs
 
@@ -94,10 +96,10 @@ class LogicalMap(object):
         """returns true if any adjacent has different cost from cell passed in as coord
         :type coord: tuple
         """
-        cost = self.costs[self.getCell(coord)]
+        cost = self.costs[self.get_cell_type(coord)]
         adjlist = self.getAdjacents(coord)
         for adj in adjlist:
-            if not self.costs[self.getCell(adj)] == cost:
+            if not self.costs[self.get_cell_type(adj)] == cost:
                 return True
         return False
 
@@ -113,28 +115,30 @@ class LogicalMap(object):
 
     def setHeuristic(self, h="octile"):
         """Explicitly set method used when getH() is called."""
-        if h == "euclid":  
+        if h == "euclid":
             self.getH = self._euclid
         elif h == "octile":
             self.getH = self._octile
         else:
             self.getH = self._manhattan
-            
+
     def setCostModel(self, cm="mixed"):
         """Sets straight and diagonal multipliers based on whichever cost model is in use.
         Builds mixedmatrix to check costs from terrain type to terrain type based on cost model. """
         if cm == "mixed_real":
             for x in self.costs:
                 for y in self.costs:
-                    # handle water as special case from non-water for uniform cost maps                
+                    # handle water as special case from non-water for uniform cost maps
                     if self.uniform and y == "W" and not x == "W":
                         self.mixedmatrix[x, y, True] = float('inf')
-                        self.mixedmatrix[x, y, False] = float('inf')  
+                        self.mixedmatrix[x, y, False] = float('inf')
                     else:
                         # diagonal moves
-                        self.mixedmatrix[x, y, True] = (self.costs[y] + self.costs[x])/2 * self.SQRT2
+                        self.mixedmatrix[x, y, True] = (
+                            self.costs[y] + self.costs[x])/2 * self.SQRT2
                         # straight moves
-                        self.mixedmatrix[x, y, False] = (self.costs[y] + self.costs[x])/2
+                        self.mixedmatrix[x, y, False] = (
+                            self.costs[y] + self.costs[x])/2
         else:
             if cm == "mixed_opt1":
                 self.straightmulti = 1
@@ -149,18 +153,22 @@ class LogicalMap(object):
             for x in self.costs:
                 for y in self.costs:
                     # diagonal moves
-                    self.mixedmatrix[x, y, True] = self.costs[y] * self.diagmulti
+                    self.mixedmatrix[x, y,
+                                     True] = self.costs[y] * self.diagmulti
                     # straight moves
-                    self.mixedmatrix[x, y, False] = self.costs[y] * self.straightmulti
-                    # handle water as special case from non-water for uniform cost maps                
+                    self.mixedmatrix[x, y,
+                                     False] = self.costs[y] * self.straightmulti
+                    # handle water as special case from non-water for uniform cost maps
                     if self.uniform and y == "W" and not x == "W":
                         self.mixedmatrix[x, y, True] = float('inf')
-                        self.mixedmatrix[x, y, False] = float('inf')  
+                        self.mixedmatrix[x, y, False] = float('inf')
                     else:
                         # diagonal moves
-                        self.mixedmatrix[x, y, True] = self.costs[y] * self.diagmulti
+                        self.mixedmatrix[x, y,
+                                         True] = self.costs[y] * self.diagmulti
                         # straight moves
-                        self.mixedmatrix[x, y, False] = self.costs[y] * self.straightmulti
+                        self.mixedmatrix[x, y,
+                                         False] = self.costs[y] * self.straightmulti
 
     def setCostCells(self, costCells={}):
         """Sets the cost of cells as per costCells- if missing, leave existing cost """
@@ -168,7 +176,7 @@ class LogicalMap(object):
             abbrev = self.terrains[terrain]
             self.costs[abbrev] = costCells[terrain]
 
-    def setDiagonal(self, d = True):
+    def setDiagonal(self, d=True):
         """Explicitly set methods to be used when getAdjacents() or isAdjacent() called.
         Modifies mixedmatrix if diagonals set to False. """
         if d:  # default
@@ -182,7 +190,7 @@ class LogicalMap(object):
                 for y in self.costs:
                     self.mixedmatrix[x, y, True] = float('inf')
 
-    def getCell(self, loc):
+    def get_cell_type(self, loc):
         """Returns character at (col, row) representing type of terrain there. Returns @ (oob) if call fails
         :type loc: (col int, row int)
         """
@@ -228,32 +236,36 @@ class LogicalMap(object):
         for k in keys:
             if door in self.key_and_doors[k]:
                 return True
-        return False      
-    
-    def getCost(self, coord, previous=None, keys=None):
+        return False
+
+    def getCost(self, next_coord, prev_coord=None, keys=None):
         """
-        Called as getCost(). Returns the cost of 
-        the terrain type at coord, read from costs dictionary.
-        If previous supplied, checks for corner-cutting and provides straight/diagonal 
+        Called as getCost(). Returns the cost of the terrain type at coord, read from costs dictionary.
+        If previous supplied, checks for corner-cutting and provides straight/diagonal
         cost based on terrain type, read from mixed cost dictionary.
         """
 
-        if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
+        # new location coord is a door; must have the key for it
+        if self.isDoor(next_coord) and not self.hasKeyForDoor(next_coord, keys):
+            return float('inf')
+        # no possible transition from prev cord to next coord
+        if prev_coord and not self.isAdjacent(next_coord, prev_coord):
             return float('inf')
 
         # get the terrain type for coord
-        coord_type = self.getCell(coord)
- 
-        if previous:
-            isDiagonalMove = self.isDiag(previous, coord)
-            if isDiagonalMove and self.cutsCorner(previous, coord, keys):
+        next_coord_type = self.get_cell_type(next_coord)
+
+        if prev_coord:
+            is_diagonal_move = self.isDiag(prev_coord, next_coord)
+            if is_diagonal_move and self.cutsCorner(prev_coord, next_coord, keys):
                 return float('inf')
             else:
-                previous_type = self.getCell(previous)
-                return self.getMixedCost(previous_type, coord_type, isDiagonalMove)
+                prev_coord_type = self.get_cell_type(
+                    prev_coord)    # get terrain type
+                return self.getMixedCost(prev_coord_type, next_coord_type, is_diagonal_move)
         else:
-            return self.costs[coord_type]
-        
+            return self.costs[next_coord_type]
+
     def cutsCorner(self, previous, coord, keys=None):
         """ returns true if diagonal move cuts corner, false otherwise. Calling program must verify that this is a diagonal move before calling cutsCorner()"""
         coord_x, coord_y = coord
@@ -264,8 +276,7 @@ class LogicalMap(object):
             return False
         else:
             return True
-            
-            
+
     @property
     def height(self):
         """
@@ -312,7 +323,7 @@ class LogicalMap(object):
         if self.isDoor(coord) and not self.hasKeyForDoor(coord, keys):
             return False
         else:
-            return self.costs[self.getCell(coord)] < float('inf')
+            return self.costs[self.get_cell_type(coord)] < float('inf')
 
     def isPassable(self, coord, previous=None, keys=None):
         """
@@ -322,7 +333,7 @@ class LogicalMap(object):
         :rtype : bool
         """
         if previous:
-            return not self.getCost(coord, previous, keys) == float('inf') 
+            return not self.getCost(coord, previous, keys) == float('inf')
         else:
             return self.isCellTraversable(coord, keys)
 
@@ -333,7 +344,7 @@ class LogicalMap(object):
         if not current:
             return self.generateCoord()
         if not self.cellWithinBoundaries(current):
-            current = self.placeOnMap(current);
+            current = self.placeOnMap(current)
         q = deque()  # fastest append/pop
         L = []  # ordinary list
         closed = set()  # fastest membership test
@@ -349,10 +360,11 @@ class LogicalMap(object):
 
     def generateCoord(self):
         """Randomly generate new coordinate and return nearest passable."""
-        x = randint(10, self.width - 10)  # allow 10 pixel margin, so not right at edge
+        x = randint(10, self.width -
+                    10)  # allow 10 pixel margin, so not right at edge
         y = randint(10, self.height - 10)
         return self.nearestPassable((x, y))
-        
+
     def placeOnMap(self, coord):
         """Return coordinate moved onto map"""
         col, row = coord
@@ -388,8 +400,8 @@ class LogicalMap(object):
              for x in range(col - 1, col + 2)
              for y in range(row - 1, row + 2)
              if not ((x == col and y == row) or x < 0 or y < 0 or x > self.width - 1 or y > self.height - 1)
-             # if (x,y) is not position and self.cellWithinBoundaries((x,y)) 
-        ]
+             # if (x,y) is not position and self.cellWithinBoundaries((x,y))
+             ]
         return L
 
     def _getNonDiagAdjacents(self, position):
@@ -415,7 +427,7 @@ class LogicalMap(object):
     def _manhattan(self, current, goal):
         """Internal. Called as getH() if HEURISTIC set to 'manhattan'"""
         return fabs((current[0] - goal[0]) + (current[1] - goal[1]))
-        
+
     def _octile(self, current, goal):
         """Internal. Called as getH() if HEURISTIC set to 'octile'"""
         xlen = fabs(current[0] - goal[0])
@@ -433,7 +445,6 @@ class LogicalMap(object):
         :rtype: float
         """
         return self.mixedmatrix.get((terrain1, terrain2, diag))
-        
 
     def _readMap(self, mappath, costpath):
         """
@@ -460,14 +471,16 @@ class LogicalMap(object):
                         key_location = (int(parsed[1]), int(parsed[2]))
                         self.key_and_doors[key_location] = []
                         while i + 1 < len(parsed):
-                            self.key_and_doors[key_location].append((int(parsed[i]), int(parsed[i + 1])))
+                            self.key_and_doors[key_location].append(
+                                (int(parsed[i]), int(parsed[i + 1])))
                             i += 2
                         # print(self.key_and_doors)
-                    else:   
-                        self.info[key] = int(parsed[1]) 
+                    else:
+                        self.info[key] = int(parsed[1])
                 # generate matrix - using 'zip' so that it reads back (col, row)
                 _matrix = [list(line.rstrip()) for line in f]
-                self.matrix = [list(x) for x in zip(*_matrix)]  # make it a list so can change it
+                # make it a list so can change it
+                self.matrix = [list(x) for x in zip(*_matrix)]
                 # self.matrix = list(zip(*_matrix))
 
                 # if cost file specified, read it and overwrite whatever cost is so far
@@ -478,17 +491,18 @@ class LogicalMap(object):
                             key = parsed[0]
                             if parsed[1] == "+inf":
                                 self.info[key] = float("inf")
-                            else:   
+                            else:
                                 self.info[key] = int(parsed[1])
 
                 # if ground1 is not given, then assume equal to ground
                 if "ground" in self.info and not "ground1" in self.info:
                     self.info['ground1'] = self.info['ground']
-                
+
                 # replace terrain types with costs obtained from map (if any), then guess whether it is uniform or not
-                self.setCostCells(self.info)  # set cost as per read from the map file above
+                # set cost as per read from the map file above
+                self.setCostCells(self.info)
                 if len(set(self.costs.values()).difference(set([float('inf')]))) == 1:
-#                 if all(self.costs[x] == self.costs['G'] for x in ('W', '.', 'S')):
+                    #                 if all(self.costs[x] == self.costs['G'] for x in ('W', '.', 'S')):
                     self.uniform = True
                 else:
                     self.uniform = False
@@ -500,11 +514,11 @@ class LogicalMap(object):
     def isMapped(self, node):
         """ returns True if node is on map """
         return 0 <= node[0] < self.width and 0 <= node[1] < self.height
-        
+
     def setPoints(self, terrain, pointlist):
         for each in pointlist:
             self.setCell(terrain, each)
-            
+
     def setCell(self, char, position):
         """Modifies matrix. Ignores if char is invalid terrain type or position is off-map"""
         if char in self.costs and self.cellWithinBoundaries(position):
@@ -518,4 +532,4 @@ class LogicalMap(object):
         :type path: list of tuples [(col, row),(col, row), ...] 
         :rtype: float
         """
-        return sum([self.getCost(path[i],path[i-1]) for i in range(len(path))[1:]])
+        return sum([self.getCost(path[i], path[i-1]) for i in range(len(path))[1:]])
