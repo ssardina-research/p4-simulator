@@ -75,12 +75,12 @@ class Gui(tkinter.Tk):
 
     def setStart(self, start):
         """draws cross at start position"""
-        self.vmap.drawCross(start, p4.COL_START)
+        self.vmap.drawCross(start, p4.COLOR_START)
         self.start = start  #position is saved, so it can be cleared
 
     def setGoal(self, goal):
         """draws cross at goal position"""
-        self.vmap.drawCross(goal, p4.COL_GOAL)
+        self.vmap.drawCross(goal, p4.COLOR_GOAL)
         self.goal = goal  #position is saved, so it can be cleared
 
     def clearPoints(self, pointlist):

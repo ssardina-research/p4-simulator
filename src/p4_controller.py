@@ -414,13 +414,11 @@ class SimController(object):
         self.keptpath = None
 
     def showWorkings(self):
-        # Used by gets drawing lists, if getWorkings() is supported by agent
-        try:
-            coordsets = self.agent.getWorkings()
-        except:
-            self.status_bar.set("No working sets available.", right_side=True)
-        else:
-            for coordset in coordsets:
+        # Used by gets drawing lists, if get_working_lists() is supported by agent
+        coord_sets = self.agent.get_working_lists()
+
+        if coord_sets:
+            for coordset in coord_sets:
                 if coordset[1] == 'reset':
                     self.gui.vmap.clear(coordset[0], self.lmap)
                 else:
@@ -428,8 +426,11 @@ class SimController(object):
             # redraw start and goal on top
             self.gui.setStart(self.cfg["START"])
             self.gui.setGoal(self.cfg["GOAL"])
-            self.coord_sets = coordsets
+            self.coord_sets = coord_sets
             self.fullsearchflag = True
+        else:
+            self.status_bar.set("No working lists available to draw", right_side=True)
+
 
     def hideWorkings(self):
         if self.fullsearchflag:
@@ -495,7 +496,7 @@ class SimController(object):
                 # get the next step from the agent; either:
                 #  (x, y): next step from the agent
                 #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
-                next_step = self.agent.getNext(
+                next_step = self.agent.get_next(
                     self.lmap, curr_coord, goal_coord, self.time_remaining)
                 clock_end = time.process_time()
                 logging.debug(next_step)

@@ -14,11 +14,18 @@ class Agent(AgentP4):
         self.nextmove = None
         self.mapref = None
         self.draw = False
+        self.closedlist = {}    # dictionary of expanded nodes - key=coord, data = node
+        self.openlist = []      # heap as prio-queue on f_val - node = (f, g, coord, parent)
 
-    def getWorkings(self):
-        return ((zip(*self.openlist)[2], p4.COL_OL), (self.closedlist, p4.COL_CL))
 
-    def getNext(self, mapref, current, goal, timeremaining):
+    def get_working_lists(self):
+        # self.openlist contains prio-queue of nodes (f, g, coord, parent)
+        # First, unpack the prio-queue via *self.openlist to get a flat sequence of nodes
+        # Then zip all those nodes to get four components: all the f's, all the g's, all the coord, and all the parent
+        # finally we keep all the coord ([2]) (in Python 3 zip() gives iterator, so we need to convert to list)
+        return ((list(zip(*self.openlist))[2], p4.COLOR_OPENLIST), (self.closedlist, p4.COLOR_CLOSELIST))
+
+    def get_next(self, mapref, current, goal, timeremaining):
         """called by SimController, uses generator to return next step towards goal."""
 
         # map, goal or expected location have changed? re-do the generation planner
@@ -38,8 +45,8 @@ class Agent(AgentP4):
         self.nextmove = None
         self.mapref = None
         self.draw = False
-        self.closedlist = {}    # dictionary of expanded nodes - key=coord, data = node
-        self.openlist = []      # heap as pqueue on f_val
+        self.closedlist = {}
+        self.openlist = []
 
 
     def _gen(self, current):
@@ -49,7 +56,7 @@ class Agent(AgentP4):
            thereafter yields the next step in the path.
         """
         # print("Planning in progress....")
-        
+
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
         reverse_path = list(reversed(self.path[:len(self.path)-1]))
 
@@ -59,8 +66,8 @@ class Agent(AgentP4):
         index_start = 0
         if self.draw:
             # first move goes with open, closed and path list for drawing, then yield each move one-by-one
-            yield self.nextmove, ((self.closedlist.keys(), p4.COL_CL), \
-               (zip(*self.openlist)[2], p4.COL_OL), (self.path, p4.COL_PP))
+            yield self.nextmove, ((self.closedlist.keys(), p4.COLOR_CLOSELIST), \
+               (zip(*self.openlist)[2], p4.COLOR_OPENLIST), (self.path, p4.COLOR_PATH))
             index_start = 0
 
         yield reverse_path[0]

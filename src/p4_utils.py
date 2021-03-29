@@ -32,13 +32,13 @@ logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logg
 VERSION = "3.5.0"
 
 # P4 CONSTANTS
-COL_OL = "red"       # open list
-COL_CL = "yellow"    # closed list
-COL_PP = "azure"     # proposed path
-COL_EX = "purple"    # extra set
+COLOR_OPENLIST = "red"       # open list
+COLOR_CLOSELIST = "yellow"    # closed list
+COLOR_PATH = "azure"     # proposed path
+COLOR_EXTRAS = "purple"    # extra set
 RESET = "reset"      # reset to current map data
-COL_START = "green"  # cross at start pos
-COL_GOAL = "tomato"  # cross at goal pos
+COLOR_START = "green"  # cross at start pos
+COLOR_GOAL = "tomato"  # cross at goal pos
 
 TIMER = "clock"      # default timer - may be clock or time
 #SQRT2 = sqrt(2)
