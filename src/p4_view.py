@@ -157,7 +157,7 @@ class Gui(tkinter.Tk):
         """Menu listener. Clears crosses from map, then SimController reloads config file"""
         self.vmap.clearCross(self.start, self.lmap)
         self.vmap.clearCross(self.goal, self.lmap)
-        self.simulator.readConfig()
+        self.simulator.read_config()
 
     def settings(self):
         """Menu listener. Displays current config settings"""
@@ -337,7 +337,8 @@ class Gui(tkinter.Tk):
         """
         if right_side:
             self.setStatusR(msg, keep)
-        self.setStatusL(msg, keep)
+        else:
+            self.setStatusL(msg, keep)
 
     def setStatusR(self, value, keep=True):
         """Writes to status bar - R"""

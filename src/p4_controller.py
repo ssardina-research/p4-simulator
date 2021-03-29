@@ -147,7 +147,7 @@ class SimController(object):
 
         # we distinguish 3 modes - config file, CLI or batch
         if cfgfile is not None:
-            self.readConfig()
+            self.read_config()
             self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
         elif self.cfg["BATCH"] is not None:
             try:
@@ -165,10 +165,10 @@ class SimController(object):
                 self.setStart(ast.literal_eval(self.cfg.get("START")))
                 self.setGoal(ast.literal_eval(self.cfg.get("GOAL")))
 
-                self.initAgent()
+                self.init_agent()
                 self.processMap()  # imports map to model may return BadMap exception
                 self.processPrefs()  # passes heuristic and deadline preferences to model
-                self.resetVars()
+                self.reset_vars()
 
             except p4.BadAgentException as e:
                 logging.error(f"Bad Agent. Irrecoverable error: {e}")
@@ -185,7 +185,7 @@ class SimController(object):
                 raise SystemExit()
 
         if self.cfg.get("GUI"):
-            self.initGui()
+            self.init_gui()
         else:
             self.search_offline()
 
@@ -226,7 +226,7 @@ class SimController(object):
                 logging.error(
                     "Trace-back: \n {}".format(traceback.format_exc()))
 
-    def initAgent(self):
+    def init_agent(self):
         # initialise agent - may throw BadAgentException
         try:
             dirname_agent = os.path.dirname(self.cfg.get("AGENT_FILE"))
@@ -239,7 +239,7 @@ class SimController(object):
         except:
             raise p4.BadAgentException("Error loading the agent")
 
-    def readConfig(self):
+    def read_config(self):
         """
         Reads config file into self.cfg dictionary. Initialises
         lmap, agent,  and gen. May be called from p4_view (menu option).
@@ -264,7 +264,7 @@ class SimController(object):
             logging.info(
                 "Options read from configuration file: {}".format(out))
 
-            self.initAgent()
+            self.init_agent()
             self.processMap()
             logging.info("Starting agent pre-processing...")
             self.processPrefs()
@@ -277,7 +277,7 @@ class SimController(object):
                     self.gui.vmap.drawMap(self.lmap)
                 self.hdl_reset()  # includes resetVars
             else:
-                self.resetVars()  # no attempt to update GUI
+                self.reset_vars()  # no attempt to update GUI
 
         except p4.BadMapException:
             self.status_bar.set(
@@ -290,7 +290,7 @@ class SimController(object):
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
             self.status_bar.set("Problem reading config file!")
 
-    def resetVars(self):
+    def reset_vars(self):
         """Resets tracked variables based on current self.cfg settings"""
         self.path_cost, self.path_steps, self.path_time = 0, 0, 0
         self.path.clear()
@@ -313,7 +313,7 @@ class SimController(object):
         # reconfigure generator based on current config
         self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
 
-    def initGui(self):
+    def init_gui(self):
         """
         Imports view module, initialises Gui, and waits
         """
@@ -588,7 +588,7 @@ class SimController(object):
         times_taken = []
         reps = int(reps)
         self.processMap()
-        self.initAgent()
+        self.init_agent()
         self.processPrefs()
         # open scenario file and read into problems list
         scenario = open(infile)
@@ -627,7 +627,7 @@ class SimController(object):
                 for i in xrange(reps):
                     try:
                         self.agent.reset()
-                        self.resetVars()
+                        self.reset_vars()
                         total_cost, total_steps, time_left, time_taken = self.search_offline()
                         times_taken.append(float(time_taken))
                         steps_taken.append(total_steps)
@@ -676,7 +676,7 @@ class SimController(object):
             self.gui.resetPos()
             self.gui.resetZoom()
         # reset vars
-        self.resetVars()
+        self.reset_vars()
         self.agent.reset()
 
         self.gui.setStart(self.cfg["START"])
