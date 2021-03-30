@@ -29,7 +29,10 @@ class Agent(AgentP4):
         # First, unpack the prio-queue via *self.openlist to get a flat sequence of nodes
         # Then zip all those nodes to get four components: all the f's, all the g's, all the coord, and all the parent
         # finally we keep all the coord ([2]) (in Python 3 zip() gives iterator, so we need to convert to list)
-        coord_open_list = list(zip(*self.openlist))[2], p4.COLOR_OPENLIST
+
+        coord_open_list = []
+        if self.openlist:
+            coord_open_list = list(zip(*self.openlist))[2], p4.COLOR_OPENLIST
 
         return ( (coord_open_list, p4.COLOR_OPENLIST), (self.closedlist, p4.COLOR_CLOSELIST))
 
@@ -57,12 +60,11 @@ class Agent(AgentP4):
            thereafter yields the next step in the path.
         """
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
-        reverse_path = list(reversed(self.path[:len(self.path)-1]))
 
         if not self.path:   # no path to destination goal!
-            yield
+            yield None
 
-        #save each step to self.nextmove to compare at getNext()
+        # Extract first move
         self.nextmove = self.path[0]
 
         if self.draw:
