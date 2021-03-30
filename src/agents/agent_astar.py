@@ -9,36 +9,9 @@ import  p4_utils as p4               #contains colours and constants
 class Agent(AgentP4):
     """Uses A* algorithm to calculate and return open list, closed list, and path"""
     def __init__(self,**kwargs):
-        self.stepgen = None
-        self.goal = None
-        self.nextmove = None
-        self.mapref = None
-        self.draw = False
-        self.closedlist = {}    # dictionary of expanded nodes - key=coord, data = node
-        self.openlist = []      # heap as prio-queue on f_val - node = (f, g, coord, parent)
+        self.reset()
 
-
-    def get_working_lists(self):
-        # self.openlist contains prio-queue of nodes (f, g, coord, parent)
-        # First, unpack the prio-queue via *self.openlist to get a flat sequence of nodes
-        # Then zip all those nodes to get four components: all the f's, all the g's, all the coord, and all the parent
-        # finally we keep all the coord ([2]) (in Python 3 zip() gives iterator, so we need to convert to list)
-        return ((list(zip(*self.openlist))[2], p4.COLOR_OPENLIST), (self.closedlist, p4.COLOR_CLOSELIST))
-
-    def get_next(self, mapref, current, goal, timeremaining):
-        """called by SimController, uses generator to return next step towards goal."""
-
-        # map, goal or expected location have changed? re-do the generation planner
-
-        if not mapref == self.mapref or not goal == self.goal or not current == self.nextmove:
-            self.reset()
-            self.goal = goal
-            self.mapref = mapref
-            self.stepgen = self._gen(current)
-
-        return next(self.stepgen) 
-
-    def reset(self, **kwargs):
+    def reset(self):
         """Initialises step generator"""
         self.stepgen = None
         self.goal = None
@@ -48,6 +21,30 @@ class Agent(AgentP4):
         self.closedlist = {}
         self.openlist = []
 
+    def get_working_lists(self):
+        # self.openlist contains prio-queue of nodes (f, g, coord, parent)
+        # First, unpack the prio-queue via *self.openlist to get a flat sequence of nodes
+        # Then zip all those nodes to get four components: all the f's, all the g's, all the coord, and all the parent
+        # finally we keep all the coord ([2]) (in Python 3 zip() gives iterator, so we need to convert to list)
+        coord_open_list = list(zip(*self.openlist))[2], p4.COLOR_OPENLIST
+
+        return ( (coord_open_list, p4.COLOR_OPENLIST), (self.closedlist, p4.COLOR_CLOSELIST))
+
+    def get_next(self, mapref, current, goal, timeremaining):
+        """Provide the next step to be performed by the agent towards goal.
+
+        A step is a coordinate (x, y) to move to or 
+        a tuple ( (x,y) (list1,list2)) where list1 and list2 are lists of coordinates for open and close list
+        """
+
+        # map, goal or expected location have changed? re-do the generation planner
+        if not mapref == self.mapref or not goal == self.goal or not current == self.nextmove:
+            self.reset()
+            self.goal = goal
+            self.mapref = mapref
+            self.stepgen = self._gen(current)   # reset generator
+
+        return next(self.stepgen)
 
     def _gen(self, current):
         """ Step generator. Yields next step to go from current location to goal location.
@@ -55,28 +52,27 @@ class Agent(AgentP4):
            On first entry, calls planpath to do a full search and stores the path,
            thereafter yields the next step in the path.
         """
-        # print("Planning in progress....")
-
         self._planpath(self.mapref, current, self.goal)   # perform search from current to goal, store path in self.path
         reverse_path = list(reversed(self.path[:len(self.path)-1]))
 
-        #save each step to self.nextmove to compare at getNext()
-        self.nextmove = reverse_path[0]
+        if not self.path:   # no path to destination goal!
+            yield
 
-        index_start = 0
+        #save each step to self.nextmove to compare at getNext()
+        self.nextmove = self.path[0]
+
         if self.draw:
             # first move goes with open, closed and path list for drawing, then yield each move one-by-one
             yield self.nextmove, ((self.closedlist.keys(), p4.COLOR_CLOSELIST), \
                (zip(*self.openlist)[2], p4.COLOR_OPENLIST), (self.path, p4.COLOR_PATH))
-            index_start = 0
 
-        yield reverse_path[0]
-        for move in reverse_path[index_start:]:
+        # yield reverse_path[0]
+        for move in self.path:
             self.nextmove = move
-            yield move
+            yield self.nextmove
 
     def _planpath(self, mapref, start, goal, all=False):
-        """ Performs A* from start to goal on map mapref """
+        """ Performs A* from start coord to goal coord on map mapref """
         if start == goal:
             return []     # 0 steps, empty self.path
 
@@ -98,27 +94,28 @@ class Agent(AgentP4):
 
             # goal reached?
             if current == goal:
-                # yes! so rewind using parent links from self.closedlist to get self.path
-                self._reconstruct(current, start)
+                # yes! reconstruct the path form start to goal
+                self._reconstruct_path(current, start)
                 return
 
             # expand current node by getting all successors and adding them to open list
-            adjacents = (mapref.getAdjacents(current))
-            for a in adjacents:
-                adjg = current_g + mapref.getCost(a, current)
-                adjf = adjg + mapref.getH(a, goal)
-                adjnode = (adjf, adjg, a, current)
-                if a not in self.closedlist:
-                    heappush(self.openlist, adjnode)
+            successors = (mapref.getAdjacents(current))
+            for next_coord in successors:
+                next_g = current_g + mapref.getCost(next_coord, current)
+                next_f = next_g + mapref.getH(next_coord, goal)
+                next_node = (next_f, next_g, next_coord, current)
+                if next_coord not in self.closedlist:
+                    heappush(self.openlist, next_node)
+        self.path = None   # no path has been found
 
-    def _reconstruct(self, current, start):
+    def _reconstruct_path(self, current, start):
         """
-           Reconstruct backwards path from current to start by following parent links
+           Reconstruct the path from start to current (generally current = goal)
         """
         self.path = [current]
         while not current == start:
             current = self.closedlist[current][p4.P_POS]
-            self.path.append(current)
+            self.path = [current, *self.path]   # we unpack the current path to put it at the end
         return
 
 

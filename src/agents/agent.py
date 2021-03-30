@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, abstractproperty
 
 class AgentP4(ABC):
 
-    def reset():
+    def reset(self):
         """Reset the agent"""
     pass
 
