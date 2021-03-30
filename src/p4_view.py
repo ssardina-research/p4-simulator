@@ -60,7 +60,114 @@ class Gui(tkinter.Tk):
         #immediately cancel, so user can modify
         self.attributes('-topmost', 0)
 
+    def _buildGui(self):
+        """Internal. Called by constructor.
+        Creates interface, inc menus, toolbar, mapholder, vmap, zoombar and statusbar
+        """
+        #window
+        self.title('p4 Path Planning Simulator')
+        w, h = self.winfo_screenwidth() - 250, self.winfo_screenheight() - 180
+
+        # set size of window based on the map
+        w, h = self.lmap.width + 50, self.lmap.height + 100
+        self.geometry(f"{w}x{h}+0+0")
+
+        #menu
+        menubar = tkinter.Menu(self)
+
+        filemenu = tkinter.Menu(menubar, tearoff=0)
+        filemenu.add_command(label='Open Map', command=self.openMap)
+        filemenu.add_command(label='Reload Config File', command=self.reconfig)
+        filemenu.add_separator()
+        filemenu.add_command(label='Display Settings', command=self.settings)
+        filemenu.add_separator()
+        filemenu.add_command(label='Quit', command=self.quit)
+
+        searchmenu = tkinter.Menu(menubar, tearoff=0)
+        searchmenu.add_command(label='Load Agent', command=self.loadAgent)
+        searchmenu.add_separator()
+        searchmenu.add_command(label='Reset Start', command=self.resetStart)
+        searchmenu.add_command(label='Reset Goal', command=self.resetGoal)
+
+        helpmenu = tkinter.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label='About p4', command=self.about)
+        helpmenu.add_command(label='Help', command=self.help)
+
+        menubar.add_cascade(label='File', menu=filemenu)
+        menubar.add_cascade(label='Search', menu=searchmenu)
+        menubar.add_cascade(label='Help', menu=helpmenu)
+
+        self.config(menu=menubar)  #show menu
+
+        #toolbar
+        toolbar = tkinter.Frame(self, borderwidth=1, relief='raised')
+        self.btnSearch = tkinter.Button(toolbar, text="Play", relief='flat', command=self.hdl_play,
+                                        state=tkinter.NORMAL)
+        self.btnSearch.pack(side='left', padx=2, pady=2)
+        self.btnPause = tkinter.Button(toolbar, text="Pause", relief='flat', command=self.searchPause,
+                                       state=tkinter.DISABLED)
+        self.btnPause.pack(side='left', padx=2, pady=2)
+        self.btnStep = tkinter.Button(toolbar, text="Step", relief='flat', command=self.searchStep,
+                                      state=tkinter.NORMAL)
+        self.btnStep.pack(side='left', padx=2, pady=2)
+        self.btnStop = tkinter.Button(toolbar, text="Stop", relief='flat', command=self.searchStop,
+                                      state=tkinter.DISABLED)
+        self.btnStop.pack(side='left', padx=2, pady=2)
+        self.btnReset = tkinter.Button(toolbar, text="Reset", relief='flat', command=self.searchReset,
+                                       state=tkinter.DISABLED)
+        self.btnReset.pack(side='left', padx=2, pady=2)
+        toolbar.pack(side='top', fill='x')
+
+        #modebar
+        modebar = tkinter.Frame(self, borderwidth=1, relief='raised')
+        self.btnS = tkinter.Button(toolbar, text="X", relief='flat', command=self.startMode, state=tkinter.NORMAL, \
+                                   background="gray", foreground="green")
+        self.btnS.pack(side='left', padx=2, pady=2)
+        self.btnG = tkinter.Button(toolbar, text="X", relief='flat', command=self.goalMode, state=tkinter.NORMAL, \
+                                   background="gray", foreground="tomato")
+        self.btnG.pack(side='left', padx=2, pady=2)
+
+        self.btnKeep = tkinter.Button(toolbar, text="Keep", relief='flat', command=self.keepPath, state=tkinter.NORMAL)
+        self.pin = tkinter.PhotoImage(file="graphics/pin1.gif")
+        self.btnKeep.config(image = self.pin)
+        self.btnKeep.pack(side='left', padx=2, pady=2)
+
+        self.btnShow = tkinter.Button(toolbar, text="Show", relief='flat', command=self.showWorkings, state=tkinter.NORMAL)
+        self.btnShow.pack(side='left', padx=2, pady=2)
+
+        modebar.pack(side="left")
+
+        #maparea
+        self.mapholder = tkinter.Frame(self)
+        self.mapholder.pack(fill=tkinter.BOTH, expand=1)
+
+        self.vmap = MapCanvas(self.mapholder, self, self.lmap)
+        self.vmap.bind_all('<Key>', self.key)  #bind events to canvas
+        self.vmap.bind('<Motion>', self.motion)
+        self.vmap.bind('<Button-1>', self.click)
+
+        #statusbar
+        statusbar = tkinter.Frame(self, borderwidth=1, relief='sunken')
+
+        #child zoombar
+        self.zoombar = tkinter.Scale(statusbar, command=self.slider, orient='horizontal', from_=0, to=4, length=120, \
+                                     showvalue=0)
+        self.zoombar.pack(side='right')
+
+        #child label
+        #set message to change when self.mode variable changes
+        statusmessage = tkinter.Label(statusbar, textvariable=self.mode, anchor=tkinter.W, justify=tkinter.LEFT)
+        statusmessage.pack(side='left')
+
+        #set message to change when self.searchState variable changes
+        statusstate = tkinter.Label(statusbar, textvariable=self.searchState, anchor=tkinter.E, justify=tkinter.RIGHT)
+        statusstate.pack(side='right')
+
+        statusbar.pack(side='bottom', fill='x')
+
+    ####################################################################################
     # GETTERS & SETTERS
+    ####################################################################################
     def setLmap(self, lmap):
         """sets lmap attribute in case of reset"""
         self.lmap = lmap
@@ -88,7 +195,9 @@ class Gui(tkinter.Tk):
         based on current lmap"""
         self.vmap.clear(pointlist, self.lmap)
 
-    #EVENT HANDLERS
+    ####################################################################################
+    # EVENT HANDLERS
+    ####################################################################################
     def key(self, event):
         """Event handler. Listens for S or s and calls SimController to toggle pause/play"""
         if event.char == "s" or event.char == "S":
@@ -146,7 +255,9 @@ class Gui(tkinter.Tk):
             self.after_cancel(self.zoomjob)
         self.zoomjob = self.after(100, actionZoom)
 
-    #MENU LISTENERS
+    ####################################################################################
+    # MENU LISTENERS
+    ####################################################################################
     def openMap(self):
         """Menu listener. Displays openfile dlg then hands off to SimController"""
         mapfile = askopenfilename(filetypes=[("Map files", "*.map")], initialdir=["../maps"])
@@ -223,56 +334,40 @@ class Gui(tkinter.Tk):
         x = tkinter.messagebox.showinfo(message=msg)
         return x == 'ok'
 
+    ####################################################################################
     # BUTTON LISTENERS
+    ####################################################################################
     def hdl_play(self):
         """
         Button listener.  This is used only on GUI mode.
 
         Calls nested generator (step) using after function.
-        Step hands off to SimController.hdlStep(), testing against areWeTereYet and outOfTime.
+        Step hands off to SimController.hdlStep(), testing against arrived and outOfTime.
         If either is True, calls terminateSearch()
+
+        Any event handler has to return quickly for the GUI to be responsive.
+        We can do this by using .after repetitively and yielding to GUI (here) or via threading:
+
+        https://www.reddit.com/r/Python/comments/7rp4xj/threading_a_tkinter_gui_is_hell_my_least_favorite/
         """
-        self._setButtonStates(0, 1, 0, 1, 0)
-
-        self.setStatusR("Searching...")
-        self.searchToggle = True
-
-        try:
-            while not self.simulator.areWeThereYet() and not self.simulator.out_of_time():
-                self.simulator.hdl_step()
+        def step():
             if self.simulator.out_of_time():
                 self.terminateSearch("Timeout!")
-            else:
+            elif self.simulator.arrived():
                 self.terminateSearch("Arrived!")
-        except Exception as e:
-            self.terminateSearch(f"Unable to handle next step! --> {e}")
-            print(f"Unable to handle next step! --> {e}")
-
-        return
-
-        # Nested generator returns control to GUI between steps
-        def step():
-            while True:
+            else:
                 try:
-                    self.simulator.hdlStep()
+                    self.simulator.hdl_step()
                 except p4.BadAgentException:
                     self.terminateSearch("Unable to process next step!")
                 else:
-                    if not self.simulator.areWeThereYet() and not self.simulator.outOfTime():
-                        print("Let's do another")
-                        self.searchjob = self.after(1, next(step()))
-                    elif self.simulator.outOfTime():
-                        self.terminateSearch("Timeout!")
-                    else:
-                        self.terminateSearch("Arrived!")
-                finally:
-                    yield
+                    # schedule next step; do not use step()! - covert speed in sec to msec
+                    self.searchjob = self.after(max(1, int(float(self.simulator.cfg.get("SPEED"))*1000)), step)    
 
-        if self.simulator.areWeThereYet():
-            self.terminateSearch("Arrived!")
-        else:
-            self.searchjob = self.after(1, next(step()))
-
+        self._setButtonStates(0, 1, 0, 1, 0)
+        self.setStatusR("Stepping...")
+        self.searchToggle = True
+        self.searchjob = self.after(1, step())
 
     def searchPause(self):
         """Button listener. Cancels after call to search generator, sets searchToggle"""
@@ -310,7 +405,8 @@ class Gui(tkinter.Tk):
            cancels signal - in case of timeout - and calls SimController's hdlStop
         """
         # I removed this March 28, 2021, not sure why it is needed... :-)
-        # self.after_cancel(self.searchjob)
+        if self.searchjob: 
+            self.after_cancel(self.searchjob)
         self._setButtonStates(0, 0, 0, 0, 1)
         self.setStatusR(msg)
         self.searchToggle = False
@@ -330,7 +426,10 @@ class Gui(tkinter.Tk):
         self.btnStop.config(state=buttonstate[sto])
         self.btnReset.config(state=buttonstate[res])
 
-    #HANDLE STATUSBAR UPDATES
+
+    ####################################################################################
+    # HANDLE STATUSBAR UPDATES
+    ####################################################################################
     def setStatus(self, msg, right_side=False, keep=True):
         """
         By default, show msg on left panel
@@ -352,6 +451,9 @@ class Gui(tkinter.Tk):
         self.mode.set(value)
         self.update_idletasks() # force immediate update
 
+    ####################################################################################
+    # OTHER WIDGET HANDLERS
+    ####################################################################################
     def goalMode(self):
         """handle red cross toggle"""
         if self.toolmode == "G":
@@ -372,7 +474,7 @@ class Gui(tkinter.Tk):
             self.toolmode = "S"
             self.btnS.config(relief="ridge")
             self.btnG.config(relief="flat")
-            
+
     def keepPath(self):
         """keep currently displayed path"""
         if self.keep == True:
@@ -383,11 +485,11 @@ class Gui(tkinter.Tk):
             self.keep = True
             self.btnKeep.config(relief="ridge")
             self.simulator.keepPath()
-            
+
     def cancelWorkings(self):
         self.show = False
         self.btnShow.config(relief="flat")
-     
+
     def showWorkings(self):
         """user wants to see closed/open lists"""
         if self.show == True:
@@ -399,108 +501,3 @@ class Gui(tkinter.Tk):
             self.btnShow.config(relief="ridge")
             self.simulator.showWorkings()
 
-    #Initialise GUI
-    def _buildGui(self):
-        """Internal. Called by constructor. 
-        Creates interface, inc menus, toolbar, mapholder, vmap, zoombar and statusbar
-        """
-        #window
-        self.title('p4 Path Planning Simulator')
-        w, h = self.winfo_screenwidth() - 250, self.winfo_screenheight() - 180
-
-        # set size of window based on the map
-        w, h = self.lmap.width + 50, self.lmap.height + 100
-        self.geometry("%dx%d+0+0" % (w, h))
-
-        #menu
-        menubar = tkinter.Menu(self)
-
-        filemenu = tkinter.Menu(menubar, tearoff=0)
-        filemenu.add_command(label='Open Map', command=self.openMap)
-        filemenu.add_command(label='Reload Config File', command=self.reconfig)
-        filemenu.add_separator()
-        filemenu.add_command(label='Display Settings', command=self.settings)
-        filemenu.add_separator()
-        filemenu.add_command(label='Quit', command=self.quit)
-
-        searchmenu = tkinter.Menu(menubar, tearoff=0)
-        searchmenu.add_command(label='Load Agent', command=self.loadAgent)
-        searchmenu.add_separator()
-        searchmenu.add_command(label='Reset Start', command=self.resetStart)
-        searchmenu.add_command(label='Reset Goal', command=self.resetGoal)
-
-        helpmenu = tkinter.Menu(menubar, tearoff=0)
-        helpmenu.add_command(label='About p4', command=self.about)
-        helpmenu.add_command(label='Help', command=self.help)
-
-        menubar.add_cascade(label='File', menu=filemenu)
-        menubar.add_cascade(label='Search', menu=searchmenu)
-        menubar.add_cascade(label='Help', menu=helpmenu)
-
-        self.config(menu=menubar)  #show menu
-
-        #toolbar
-        toolbar = tkinter.Frame(self, borderwidth=1, relief='raised')
-        self.btnSearch = tkinter.Button(toolbar, text="Play", relief='flat', command=self.hdl_play,
-                                        state=tkinter.NORMAL)
-        self.btnSearch.pack(side='left', padx=2, pady=2)
-        self.btnPause = tkinter.Button(toolbar, text="Pause", relief='flat', command=self.searchPause,
-                                       state=tkinter.DISABLED)
-        self.btnPause.pack(side='left', padx=2, pady=2)
-        self.btnStep = tkinter.Button(toolbar, text="Step", relief='flat', command=self.searchStep,
-                                      state=tkinter.NORMAL)
-        self.btnStep.pack(side='left', padx=2, pady=2)
-        self.btnStop = tkinter.Button(toolbar, text="Stop", relief='flat', command=self.searchStop,
-                                      state=tkinter.DISABLED)
-        self.btnStop.pack(side='left', padx=2, pady=2)
-        self.btnReset = tkinter.Button(toolbar, text="Reset", relief='flat', command=self.searchReset,
-                                       state=tkinter.DISABLED)
-        self.btnReset.pack(side='left', padx=2, pady=2)
-        toolbar.pack(side='top', fill='x')
-
-        #modebar
-        modebar = tkinter.Frame(self, borderwidth=1, relief='raised')
-        self.btnS = tkinter.Button(toolbar, text="X", relief='flat', command=self.startMode, state=tkinter.NORMAL, \
-                                   background="gray", foreground="green")
-        self.btnS.pack(side='left', padx=2, pady=2)
-        self.btnG = tkinter.Button(toolbar, text="X", relief='flat', command=self.goalMode, state=tkinter.NORMAL, \
-                                   background="gray", foreground="tomato")
-        self.btnG.pack(side='left', padx=2, pady=2)
-        
-        self.btnKeep = tkinter.Button(toolbar, text="Keep", relief='flat', command=self.keepPath, state=tkinter.NORMAL)
-        self.pin = tkinter.PhotoImage(file="graphics/pin1.gif")
-        self.btnKeep.config(image = self.pin)
-        self.btnKeep.pack(side='left', padx=2, pady=2)
-        
-        self.btnShow = tkinter.Button(toolbar, text="Show", relief='flat', command=self.showWorkings, state=tkinter.NORMAL)
-        self.btnShow.pack(side='left', padx=2, pady=2)
-        
-        modebar.pack(side="left")
-        
-        #maparea
-        self.mapholder = tkinter.Frame(self)
-        self.mapholder.pack(fill=tkinter.BOTH, expand=1)
-
-        self.vmap = MapCanvas(self.mapholder, self, self.lmap)
-        self.vmap.bind_all('<Key>', self.key)  #bind events to canvas
-        self.vmap.bind('<Motion>', self.motion)
-        self.vmap.bind('<Button-1>', self.click)
-
-        #statusbar
-        statusbar = tkinter.Frame(self, borderwidth=1, relief='sunken')
-
-        #child zoombar
-        self.zoombar = tkinter.Scale(statusbar, command=self.slider, orient='horizontal', from_=0, to=4, length=120, \
-                                     showvalue=0)
-        self.zoombar.pack(side='right')
-
-        #child label
-        #set message to change when self.mode variable changes
-        statusmessage = tkinter.Label(statusbar, textvariable=self.mode, anchor=tkinter.W, justify=tkinter.LEFT)
-        statusmessage.pack(side='left')
-
-        #set message to change when self.searchState variable changes
-        statusstate = tkinter.Label(statusbar, textvariable=self.searchState, anchor=tkinter.E, justify=tkinter.RIGHT)
-        statusstate.pack(side='right')
-
-        statusbar.pack(side='bottom', fill='x')

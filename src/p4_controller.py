@@ -556,7 +556,7 @@ class SimController(object):
                             time_left=self.time_remaining, time_taken=self.path_time)
         return (self.path_cost, self.path_steps, self.time_remaining, self.path_time)
 
-    def areWeThereYet(self):
+    def arrived(self):
         """Returns True/False."""
         return self.current == self.cfg["GOAL"]
 
@@ -614,9 +614,7 @@ class SimController(object):
                 count += 1
                 skip, mappath, size1, size2, scol, srow, gcol, grow, optimum = problem
                 logging.info(
-                    "========> Running problem {}: from ({},{}) to ({},{}) - Optimal: {}".format(count, scol, srow,
-                                                                                                 gcol, grow,
-                                                                                                 optimum))
+                    f"===> Running problem {count}: from ({scol},{srow}) to ({gcol},{grow}) - Optimal: {optimum}")
                 pathname, map = os.path.split(mappath)
                 self.cfg["START"] = (int(scol), int(srow))
                 self.cfg["GOAL"] = (int(gcol), int(grow))
@@ -691,7 +689,7 @@ class SimController(object):
 
     def hdl_step(self):
         """Button handler. Only used for in GUI mode.
-            Performs one step for GUI Step or Search.
+            Performs one step for GUI.
 
            Checks for goal, calls gen to get next step from agent, displays step on map,
            and updates status bar. If "SPEED" set, inserts delay.
@@ -750,7 +748,6 @@ class SimController(object):
                     self.status_bar.set(
                         curr_step=next_step, cost=self.path_cost, no_steps=self.path_steps, time_taken=self.path_time)
 
-                time.sleep(float(self.cfg.get("SPEED")))  # delay, if any
 
     ################################################################################
     # MENU HANDLERS FOR THE GUI
