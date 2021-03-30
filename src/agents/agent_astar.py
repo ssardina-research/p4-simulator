@@ -7,7 +7,10 @@ import  p4_utils as p4               #contains colours and constants
 #from twisted.python.util import println
 
 class Agent(AgentP4):
-    """Uses A* algorithm to calculate and return open list, closed list, and path"""
+    """Uses A* algorithm to calculate and return open list, closed list, and path
+    
+    The main function is get_next() to yield the next step, possibly with working info
+    """
     def __init__(self,**kwargs):
         self.reset()
 
@@ -33,8 +36,9 @@ class Agent(AgentP4):
     def get_next(self, mapref, current, goal, timeremaining):
         """Provide the next step to be performed by the agent towards goal.
 
-        A step is a coordinate (x, y) to move to or 
-        a tuple ( (x,y) (list1,list2)) where list1 and list2 are lists of coordinates for open and close list
+        A step is just a coordinate (x, y) to move to or
+        a tuple ((x,y), ((list1,col1), (list2,col2), (list3,col3))) where
+        with the second part being working lists (open, closed, path) to draw with their colors
         """
 
         # map, goal or expected location have changed? re-do the generation planner

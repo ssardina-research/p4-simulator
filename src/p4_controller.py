@@ -364,15 +364,9 @@ class SimController(object):
         while not self.cfg["GOAL"] == next_coord and self.time_remaining:
             try:
                 # Don't set signal for infinite time
-                if self.time_remaining < float('inf'):
-                    with Timeout(self.time_remaining):  # call under SIGNAL
-                        # get the next step from the agent; either:
-                        #  (x, y): next step from the agent
-                        #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
-                        next_step = next(self.gen)   # this yields the next coordinate to move to
-                        next_coord = self._get_coordinate(next_step)
-                else: # call with no SIGNAL
-                    next_coord = self._get_coordinate(next(self.gen))
+                with Timeout(self.time_remaining):  # call under SIGNAL
+                    next_step = next(self.gen)      # this yields the next coordinate to move to (and maybe workign lists)
+                    next_coord = self._get_coordinate(next_step)
             except Timeout.Timeout:
                 self.time_remaining = -1
                 self.status_bar.set("Timed Out!")
@@ -454,14 +448,19 @@ class SimController(object):
         Passes mapref, currentpos, goal, timeremaining to Agent
         Retrieves and yields next step on search path.
 
+        Next step can be either:
+        (x, y): just the next coordinate to move to
+        ((x, y), ( (list1, col1),...,(listn, coln))): coordinate to move + working lists to draw with colors
+
+
         Maintains state for supplied coordinates 
         but updates path_cost, path_steps, path_time and time_remaining in self.
 
         :param curr_coord: Current position.
         :type curr_coord: (int, int)
         :param goal_coord: Target position.
-        :type goal_coord: (int,int)
-        :rtype : (int,int) or ((int, int) (list1, list2,list3))
+        :type goal_coord: (int, int)
+        :rtype : (int, int) or ((int, int) ( (list1, col1), ..., (listn, coln)))
         """
 
         # list of all the keys available
@@ -493,15 +492,15 @@ class SimController(object):
                     yield newpos  # scripted move is not costed or counted
             try:    # produce new agent step via agent getNext()
                 clock_start = time.process_time()
-                # get the next step from the agent; either:
-                #  (x, y): next step from the agent
-                #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
                 next_step = self.agent.get_next(
                     self.lmap, curr_coord, goal_coord, self.time_remaining)
                 clock_end = time.process_time()
                 logging.debug(next_step)
             except p4.BadAgentException:
                 raise p4.BadAgentException("Agent problem while computing next step")
+
+            if not next_step:   # no move possible (no path found!)
+                return None
 
             # Only time the first step, unless operating in 'realtime' mode. 
             # If this is realtime, and the step involved no reasoning (took less than FREE_TIME) do not count its time
@@ -513,7 +512,7 @@ class SimController(object):
             # save previous coord and extract next one (and optional drawing lists)
             prev_coord = curr_coord
             curr_coord = self._get_coordinate(next_step)
-            drawing_lists = self._get_drawing_lists(next_step)  # may be None
+            #drawing_lists = self._get_drawing_lists(next_step)  # may be None - not used here
 
             # update tracking vars
             self.path_steps += 1
@@ -699,14 +698,11 @@ class SimController(object):
            taken to click the button again."""
         if not self.current == self.cfg["GOAL"] and self.time_remaining:
             try:
-                if self.time_remaining < float('inf'):
-                    with Timeout(self.time_remaining):  # call under SIGNAL
-                        # get the next step from the agent; either:
-                        #  (x, y): next step from the agent
-                        #  ((x,y), (list1,list2,list3)): next step plu drawing/working lists (e.g., open and closed lists)
-                        next_step = next(self.gen)
-                else:
-                    next_step = next(self.gen)  # call with no SIGNAL
+                with Timeout(self.time_remaining):  # call under SIGNAL
+                    # get the next step from the agent; either:
+                    #  (x, y): next step from the agent
+                    #  ((x,y), ((list1, col1),...,(listn, coln))): next coord + working lists with colors to drw
+                    next_step = next(self.gen)
             except Timeout.Timeout:
                 self.time_remaining = -1.0
                 self.status_bar.set("Time Out!", right_side=True)
