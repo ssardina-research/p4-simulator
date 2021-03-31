@@ -26,6 +26,7 @@ from tkinter.filedialog import askopenfilename
 # import tkinter.import tkMessageBox
 import tkinter.messagebox
 from p4_controller import SimController
+from p4_model import LogicalMap
 
 from p4_view_map import MapCanvas
 import p4_utils as p4  # contains color constants
@@ -357,17 +358,119 @@ class Gui(tkinter.Tk):
                 self.terminateSearch("Arrived!")
             else:
                 try:
-                    self.simulator.hdl_step()
+                    self.make_one_step()
                 except p4.BadAgentException:
                     self.terminateSearch("Unable to process next step!")
                 else:
                     # schedule next step; do not use step()! - covert speed in sec to msec
                     self.searchjob = self.after(max(1, int(float(self.simulator.cfg.get("SPEED"))*1000)), step)    
 
+        # def step():
+        #     if self.simulator.out_of_time():
+        #         self.terminateSearch("Timeout!")
+        #     elif self.simulator.arrived():
+        #         self.terminateSearch("Arrived!")
+        #     else:
+        #         try:
+        #             self.simulator.hdl_step()
+        #         except p4.BadAgentException:
+        #             self.terminateSearch("Unable to process next step!")
+        #         else:
+        #             # schedule next step; do not use step()! - covert speed in sec to msec
+        #             self.searchjob = self.after(max(1, int(float(self.simulator.cfg.get("SPEED"))*1000)), step)    
+
+
         self._setButtonStates(0, 1, 0, 1, 0)
         self.setStatusR("Stepping...")
         self.searchToggle = True
         self.searchjob = self.after(1, step())
+
+    def make_one_step(self):
+        """Button handler. Only used for in GUI mode.
+            Performs one step for GUI.
+
+           Checks for goal, calls gen to get next step from agent, displays step on map,
+           and updates status bar. If "SPEED" set, inserts delay.
+
+           Note: delay occurs whether called as single step or within
+           continuous search; with step, the delay is unnoticeable because of the time
+           taken to click the button again."""
+        if not self.simulator.current == self.simulator.cfg["GOAL"] and self.simulator.time_remaining:
+            try:
+                with p4.Timeout(self.simulator.time_remaining):  # call under SIGNAL
+                    # get the next step from the agent; either:
+                    #  (x, y): next step from the agent
+                    #  ((x,y), ((list1, col1),...,(listn, coln))): next coord + working lists with colors to drw
+                    next_step = next(self.simulator.gen)
+            except p4.Timeout.Timeout:
+                self.simulator.time_remaining = -1.0
+                self.show_status("Time Out!", right_side=True)
+            except StopIteration:   # no next step provided!
+                self.simulator.path_steps = -1
+                self.simulator.path_time = float('inf')
+                self.terminateSearch("No plan found!")
+            except Exception as e:
+                self.show_status(f"Agent returned exception on new step: {e}", right_side=False)
+                raise e
+            else:  # try/except/else...
+                # does nextreturn include a list of coordinates to draw?
+                next_coord = self.simulator.get_coordinate(next_step)
+                coord_sets = self.simulator.get_drawing_lists(next_step)
+                if coord_sets:
+                    for coord_set in coord_sets:
+                        if coord_set[1] == 'reset':
+                            self.vmap.clear(coord_set[0], self.simulator.lmap)
+                        else:
+                            self.vmap.drawSet(coord_set[0], coord_set[1])
+                    self.setStart(self.cfg["START"])
+                    self.setGoal(self.cfg["GOAL"])
+                    self.simulator.fullsearchflag = True
+                    self.simulator.coord_sets = coord_sets
+                    self.show_status("Plotting path...", right_side=True)
+
+                # Paint path
+                self.vmap.drawSet(self.simulator.path, "blue")
+                self.vmap.drawPoint(next_coord, "white")
+                self.simulator.current = next_coord
+                self.simulator.path.add(next_coord)
+
+                self.simulator.show_status(curr_step=next_coord)
+
+    def hdl_reset(self, msg="OK"):
+        """Button handler. Clears map, resets GUI and calls setVars"""
+        if self.simulator.have_script:
+            self.simulator.lmap = LogicalMap(
+                os.path.join("../maps/", self.simulator.cfg["MAP_FILE"]))
+            self.setLmap(self.simulator.lmap)
+            self.vmap.drawMap(self.simulator.lmap)
+            self.simulator.cfg["GOAL"] = self.simulator.goal_changes["ORIGIN"]
+
+        else:
+            # clear map
+            self.vmap.clear(self.simulator.path, self.simulator.lmap)
+            if self.simulator.fullsearchflag:
+                self.show_status("Redrawing map")
+                self.show_status("Please wait...", right_side=False)
+                for (a, b) in self.simulator.coord_sets:
+                    self.vmap.clear(a, self.simulator.lmap)
+                self.simulator.fullsearchflag = False
+                self.show_status("", right_side=False)
+            # resize and reposition
+            self.resetPos()
+            self.resetZoom()
+        # reset vars
+        self.simulator.reset_vars()
+        self.simulator.agent.reset()
+
+        self.simulator.setStart(self.simulator.cfg["START"])
+        self.simulator.setGoal(self.simulator.cfg["GOAL"])
+        if self.simulator.keptpath:
+            self.vmap.drawSet(self.simulator.keptpath, "orange")
+        self.cancelWorkings()
+        self.show_status(msg)
+        self.show_status("", right_side=True)  # clears RIGHT statusbar
+
+
 
     def searchPause(self):
         """Button listener. Cancels after call to search generator, sets searchToggle"""
@@ -381,23 +484,25 @@ class Gui(tkinter.Tk):
         self._setButtonStates(1, 0, 1, 1, 0)
         self.setStatusR("Paused...")
         self.searchToggle = False
-        self.simulator.hdl_step()
+        self.make_one_step()
 
     def searchStop(self):
         """Button listener. Cancels 'after' call to search generator, calls SimController's
            hdlStop function"""
-        self.after_cancel(self.searchjob)
+        try:
+            self.after_cancel(self.searchjob)
+        except ValueError:
+            pass # the job has been completed anyways
         self._setButtonStates(0, 0, 0, 0, 1)
         self.setStatusR("Stopped.")
         self.searchToggle = False
-        self.simulator.finish_behavior()
 
     def searchReset(self):
         """Button listener. Resets buttons and calls simulator's hdlReset function."""
         self._setButtonStates(1, 0, 1, 0, 0)
         self.setStatusR("")
         self.searchToggle = False
-        self.simulator.hdl_reset()
+        self.hdl_reset()
 
     def terminateSearch(self, msg):
         """
@@ -414,7 +519,6 @@ class Gui(tkinter.Tk):
             signal.alarm(0)  # cancel signal
         except AttributeError:
             pass
-        self.simulator.finish_behavior()
 
     def _setButtonStates(self, sea=0, pau=0, ste=0, sto=0, res=0):
         """Internal. Lets button listeners enable/disable button states as required"""
@@ -430,7 +534,7 @@ class Gui(tkinter.Tk):
     ####################################################################################
     # HANDLE STATUSBAR UPDATES
     ####################################################################################
-    def setStatus(self, msg, right_side=False, keep=True):
+    def show_status(self, msg, right_side=False, keep=True):
         """
         By default, show msg on left panel
         """

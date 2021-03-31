@@ -32,72 +32,12 @@ import logging
 # whichever class is appropriate to os but call them by same alias.
 if os.name == 'posix':
     # from time import time as timer
-    print("using posix")
     from p4_utils import Timeout
 else:
     # from time import clock as timer
     from p4_utils import WinTimeout as Timeout
 
 from p4_model import LogicalMap
-
-
-class StatusBar(object):
-    """
-    Keeps track of the current status bar message made of several parts
-    """
-
-    def __init__(self, msg="Status bar initialized", precision=4):
-        self.cost = 0
-        self.curr_step = None
-        self.no_steps = 0
-        self.time_left = 0
-        self.time_taken = 0
-        self.status = msg
-        self.precision = precision
-        self.message = msg
-        self.report_func = None
-
-    def reset(self, msg="Status bar reset", precision=4):
-        self.cost = 0
-        self.curr_step = None
-        self.no_steps = 0
-        self.time_left = 0
-        self.time_taken = 0
-        self.status = msg
-        self.precision = precision
-        self.message = msg
-
-    def set(self, *arg, curr_step=None, cost=None, no_steps=None, time_left=None, time_taken=None, status=None, **kargs):
-        if len(arg) == 1 and isinstance(arg[0], str):
-            self.message = arg[0]
-        else:
-            if curr_step:
-                self.curr_step = curr_step
-            if cost:
-                self.cost = cost
-            if no_steps:
-                self.no_steps = no_steps
-            if time_left:
-                self.time_left = time_left
-            if time_taken:
-                self.time_taken = time_taken
-            if status:
-                self.status = status
-            self.message = f"Cost: {self.cost:.{self.precision}f} | Steps: {self.no_steps} | Left: {self.time_left:.{self.precision}f} | Taken: {self.time_taken:.{self.precision}f}"
-            if self.curr_step:
-                self.message = f"{self.curr_step} | {self.message}"
-        self.display(**kargs)
-
-    def get(self):
-        return self.message
-
-    def set_report_func(self, func):
-        """Sets the reporting function"""
-        self.report_func = func
-
-    def display(self, *args, **kargs):
-        """Performs the display of the current status bar message"""
-        self.report_func(self.get(), *args, **kargs)
 
 
 class SimController(object):
@@ -127,11 +67,6 @@ class SimController(object):
         self.time_remaining = float('inf')
         self.timeout = float('inf')
 
-        self.status_bar = StatusBar("Status bar initialized")
-        self.status_bar.set_report_func(
-            lambda msg: logging.info("STATUS (no GUI): {}".format(msg)))
-
-        self.status_bar.display()
         self.path = set()  # set of all coordinates displayed as part of path
         self.keptpath = None
         self.fullsearchflag = False  # set to True if map is populated with extra coords
@@ -188,6 +123,21 @@ class SimController(object):
             self.init_gui()
         else:
             self.search_offline()
+
+    def show_status(self, *arg, curr_step=None, right_side=False):
+        PRECISION = 4
+
+        if len(arg) == 1 and isinstance(arg[0], str):
+            message = arg[0]
+        else:
+            message = f"Cost: {self.path_cost:.{PRECISION}f} | Steps: {self.path_steps} | Left: {self.time_remaining:.{PRECISION}f} | Taken: {self.path_time:.{PRECISION}f}"
+            if curr_step:
+                message = f"{curr_step} | {message}"
+
+        if self.gui:
+            self.gui.show_status(message, right_side)
+        else:
+            logging.info("STATUS (no GUI): {}".format(message))
 
     def processMap(self):
         # may throw BadMapException
@@ -280,15 +230,14 @@ class SimController(object):
                 self.reset_vars()  # no attempt to update GUI
 
         except p4.BadMapException:
-            self.status_bar.set(
-                f"Unable to load map: {self.cfg.get('MAP_FILE')}")
+            self.show_status(f"Unable to load map: {self.cfg.get('MAP_FILE')}")
         except p4.BadAgentException as e:
-            self.status_bar.set(
+            self.show_status(
                 f"Problem loading agent {self.cfg.get('AGENT_FILE')}: {e}")
         except:
             # unexpected error
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
-            self.status_bar.set("Problem reading config file!")
+            self.show_status("Problem reading config file!")
 
     def reset_vars(self):
         """Resets tracked variables based on current self.cfg settings"""
@@ -318,15 +267,10 @@ class SimController(object):
         Imports view module, initialises Gui, and waits
         """
         from p4_view import Gui
-        self.status_bar.set("Launching GUI...")
         self.gui = Gui(self, self.lmap)
+        self.show_status("GUI initialized!")
         self.gui.setStart(self.cfg["START"])
         self.gui.setGoal(self.cfg["GOAL"])
-
-        # register GUI status bar report function
-        self.status_bar.set_report_func(
-            lambda msg, **kargs: self.gui.setStatus(msg, kargs))
-        self.status_bar.set("OK")
 
         self.gui.mainloop()  # start TK main loop
 
@@ -338,7 +282,7 @@ class SimController(object):
         We really do not care here about each step as they are not displayed;
         just that they are returned and the goal is reached on time
         """
-        self.status_bar.set("Executing simulation...")
+        self.show_status("Executing simulation...")
         next_coord = self.cfg["START"]
 
         # TODO: new timeout way taken from PACMAN, not working yet
@@ -352,9 +296,9 @@ class SimController(object):
         #         next_step = self._get_coordinate(result)
         #     except p4.TimeoutFunctionException:
         #         self.timeremaining = 0
-        #         self.status_bar.set("Timed Out!")
+        #         self.show_status("Timed Out!")
         #     except:
-        #         self.status_bar.set(f"Agent returned {next_step}")
+        #         self.show_status(f"Agent returned {next_step}")
         #         logging.error(
         #             "Trace-back: \n {}".format(traceback.format_exc()))
         #         raise SystemExit()
@@ -366,20 +310,28 @@ class SimController(object):
                 # Don't set signal for infinite time
                 with Timeout(self.time_remaining):  # call under SIGNAL
                     next_step = next(self.gen)      # this yields the next coordinate to move to (and maybe workign lists)
-                    next_coord = self._get_coordinate(next_step)
+                    next_coord = self.get_coordinate(next_step)
             except Timeout.Timeout:
                 self.time_remaining = -1
-                self.status_bar.set("Timed Out!")
+                self.show_status("Timed Out!")
                 break
-            except:
-                self.status_bar.set(f"Agent returned {next_coord}")
+            except StopIteration:   # no next step provided!
+                self.time_remaining = -2
+                self.path_steps = -1
+                self.path_time = float('inf')
+                self.show_status(f"No plan found!")
+                break
+            except Exception as e:
+                self.show_status(f"Agent had problem returning the next step!: {e}")
                 logging.error(
                     "Trace-back: \n {}".format(traceback.format_exc()))
                 raise SystemExit()
                 break
-        return self.finish_behavior()  # (totalcost, pathsteps, timeremaining, pathtime)
+        if self.cfg["GOAL"] == next_coord:
+            self.show_status()
+        return (self.path_cost, self.path_steps, self.time_remaining, self.path_time)
 
-    def _get_coordinate(self, next_step):
+    def get_coordinate(self, next_step):
         """Keep the first argument of a next step, and drop any possible argument for drawing lists
             nex_step = (x,y) or nextstep = ((x, y), (list1, list2, list3))
         """
@@ -388,7 +340,7 @@ class SimController(object):
         else:
             return next_step
 
-    def _get_drawing_lists(self, nextstep):
+    def get_drawing_lists(self, nextstep):
         """Keep the second argument of a next step (the list for drawings), and drop the coordinate
             nex_step = (x,y) or nextstep = ((x, y), (list1, list2, list3))
         """
@@ -423,7 +375,7 @@ class SimController(object):
             self.coord_sets = coord_sets
             self.fullsearchflag = True
         else:
-            self.status_bar.set("No working lists available to draw", right_side=True)
+            self.show_status("No working lists available to draw", right_side=True)
 
 
     def hideWorkings(self):
@@ -490,6 +442,7 @@ class SimController(object):
                         curr_coord, self.agent_changes.get(self.path_steps))
                     curr_coord = self.lmap.nearestPassable(newpos)
                     yield newpos  # scripted move is not costed or counted
+
             try:    # produce new agent step via agent getNext()
                 clock_start = time.process_time()
                 next_step = self.agent.get_next(
@@ -511,8 +464,8 @@ class SimController(object):
 
             # save previous coord and extract next one (and optional drawing lists)
             prev_coord = curr_coord
-            curr_coord = self._get_coordinate(next_step)
-            #drawing_lists = self._get_drawing_lists(next_step)  # may be None - not used here
+            curr_coord = self.get_coordinate(next_step)
+            #drawing_lists = self.get_drawing_lists(next_step)  # may be None - not used here
 
             # update tracking vars
             self.path_steps += 1
@@ -530,8 +483,7 @@ class SimController(object):
 
             # Agent has made illegal move (e.g., non-adjacent or non-traversable cell, no key for door)
             if cost_step == float('inf'):
-                self.status_bar.set(
-                    f"Illegal move to {curr_coord} : {self.lmap.getCost(curr_coord)}", right_side=True)
+                logging.warning(f"Illegal move to {curr_coord} : {self.lmap.getCost(curr_coord)}")
 
                 # force strict true dynamics: agent must stay in same place; no cost
                 # if non-strict, step will be allowed (though will have infinite cost)
@@ -548,12 +500,6 @@ class SimController(object):
                 raise Timeout.Timeout()
 
             yield next_step
-
-    def finish_behavior(self):
-        """Called when agent run is finished to report (in status bar) and return totals"""
-        self.status_bar.set(cost=self.path_cost, no_steps=self.path_steps,
-                            time_left=self.time_remaining, time_taken=self.path_time)
-        return (self.path_cost, self.path_steps, self.time_remaining, self.path_time)
 
     def arrived(self):
         """Returns True/False."""
@@ -577,9 +523,9 @@ class SimController(object):
             self.terrain_changes = self.script.get("TERRAIN_CHANGE")
             self.agent_changes = self.script.get("AGENT_CHANGE")
             self.have_script = True
-            self.status_bar.set("Loaded script")
+            self.show_status("Loaded script")
         except:  # we don't care why it failed
-            self.status_bar.set("Failed to load script.py")
+            self.show_status("Failed to load script.py")
 
     def runBatch(self, infile, outfile, reps=1):
         # assumes MAP_FILE, AGENT_FILE set in self.cfg
@@ -647,108 +593,12 @@ class SimController(object):
                     [self.cfg["AGENT_FILE"], count, map, str(scol), srow, gcol, grow, optimum, total_cost,
                      total_steps, time_taken, quality])
 
-    ################################################################################
-    # BUTTON HANDLERS FOR THE GUI
-    ################################################################################
-
-    def hdl_reset(self, msg="OK"):
-        """Button handler. Clears map, resets GUI and calls setVars"""
-        if self.have_script:
-            self.lmap = LogicalMap(os.path.join(
-                "../maps/", self.cfg["MAP_FILE"]))
-            self.gui.setLmap(self.lmap)
-            self.gui.vmap.drawMap(self.lmap)
-            self.cfg["GOAL"] = self.goal_changes["ORIGIN"]
-
-        else:
-            # clear map
-            self.gui.vmap.clear(self.path, self.lmap)
-            if self.fullsearchflag:
-                self.status_bar.set("Redrawing map")
-                self.status_bar.set("Please wait...", right_side=False)
-                for (a, b) in self.coord_sets:
-                    self.gui.vmap.clear(a, self.lmap)
-                self.fullsearchflag = False
-                self.status_bar.set("", right_side=False)
-            # resize and reposition
-            self.gui.resetPos()
-            self.gui.resetZoom()
-        # reset vars
-        self.reset_vars()
-        self.agent.reset()
-
-        self.gui.setStart(self.cfg["START"])
-        self.gui.setGoal(self.cfg["GOAL"])
-        if self.keptpath:
-            self.gui.vmap.drawSet(self.keptpath, "orange")
-        self.gui.cancelWorkings()
-        self.status_bar.set(msg)
-        self.status_bar.set("", right_side=True)  # clears RIGHT statusbar
-
-
-    def hdl_step(self):
-        """Button handler. Only used for in GUI mode.
-            Performs one step for GUI.
-
-           Checks for goal, calls gen to get next step from agent, displays step on map,
-           and updates status bar. If "SPEED" set, inserts delay.
-
-           Note: delay occurs whether called as single step or within
-           continuous search; with step, the delay is unnoticeable because of the time
-           taken to click the button again."""
-        if not self.current == self.cfg["GOAL"] and self.time_remaining:
-            try:
-                with Timeout(self.time_remaining):  # call under SIGNAL
-                    # get the next step from the agent; either:
-                    #  (x, y): next step from the agent
-                    #  ((x,y), ((list1, col1),...,(listn, coln))): next coord + working lists with colors to drw
-                    next_step = next(self.gen)
-            except Timeout.Timeout:
-                self.time_remaining = -1.0
-                self.status_bar.set("Time Out!", right_side=True)
-                # else:
-                #     #TODO: this is strange to recognize no plan via Timeout!
-                #     self.status_bar.set("No path found", right_side=False)
-                self.finish_behavior()
-            except Exception as e:
-                self.status_bar.set(
-                    f"Agent returned exception on new step: {e}", right_side=False)
-                self.finish_behavior()
-                raise e
-            else:  # try/except/else...
-                # does nextreturn include a list of coordinates to draw?
-                next_coord = self._get_coordinate(next_step)
-                coord_sets = self._get_drawing_lists(next_step)
-                if coord_sets:
-                    for coord_set in coord_sets:
-                        if coord_set[1] == 'reset':
-                            self.gui.vmap.clear(coord_set[0], self.lmap)
-                        else:
-                            self.gui.vmap.drawSet(coord_set[0], coord_set[1])
-                    self.gui.setStart(self.cfg["START"])
-                    self.gui.setGoal(self.cfg["GOAL"])
-                    self.fullsearchflag = True
-                    self.coord_sets = coord_sets
-                    self.status_bar.set("Plotting path...", right_side=True)
-
-                # Paint path
-                self.gui.vmap.drawSet(self.path, "blue")
-                self.gui.vmap.drawPoint(next_coord, "white")
-                self.current = next_coord
-                self.path.add(next_coord)
-
-                if self.cfg.get("DEADLINE"):
-                    self.status_bar.set(curr_step=next_coord, cost=self.path_cost,
-                                        no_steps=self.path_steps, time_left=self.time_remaining, time_taken=self.path_time)
-                else:
-                    self.status_bar.set(
-                        curr_step=next_step, cost=self.path_cost, no_steps=self.path_steps, time_taken=self.path_time)
 
 
     ################################################################################
-    # MENU HANDLERS FOR THE GUI
+    # MENU HANDLERS FOR THE GUI - 
+    #TODO: would be nice to decouple and move all this to p4_view
     ################################################################################
-
     def loadMap(self, mapfile):
         """
         Menu handler: File - Open Map. Loads map based on openfiledialog in
@@ -757,7 +607,7 @@ class SimController(object):
         :type mapfile: string
         """
         try:
-            self.status_bar.set("Loading map...")
+            self.show_status("Loading map...")
             self.lmap = LogicalMap(mapfile)
 
             # pass new LogicalMap references to Gui and MapCanvas (vmap)
@@ -765,7 +615,7 @@ class SimController(object):
             self.gui.vmap.drawMap(self.lmap)
 
         except:
-            self.status_bar.set("Unable to load map: " + mapfile)
+            self.show_status("Unable to load map: " + mapfile)
 
         else:
             self.processPrefs()
@@ -790,7 +640,7 @@ class SimController(object):
         if self.gui is not None:
             self.gui.clearStart()
             self.gui.setStart(self.cfg["START"])
-            self.status_bar.set(f"Start moved to {self.cfg['START']}")
+            self.show_status(f"Start moved to {self.cfg['START']}")
             # TODO check search not in progress before resetting generator.
             self.gen = self.step_generator(self.cfg["START"], self.cfg["GOAL"])
 
@@ -803,7 +653,7 @@ class SimController(object):
         if self.gui is not None:
             self.gui.clearGoal()
             self.gui.setGoal(self.cfg["GOAL"])
-            self.status_bar.set(f"Goal moved to {self.cfg['GOAL']}")
+            self.show_status(f"Goal moved to {self.cfg['GOAL']}")
 
     def loadAgent(self, agentpath):
         """Menu handler: Search - Load Agent. Loads agent based on openfiledialog in
@@ -820,9 +670,9 @@ class SimController(object):
             self.agent = agentmod.Agent()
             self.agent.reset()
 
-            self.status_bar.set(f"Initialised {agentfile}")
+            self.show_status(f"Initialised {agentfile}")
         except:
-            self.status_bar.set(f"Unable to load {agentfile}")
+            self.show_status(f"Unable to load {agentfile}")
             logging.error("Trace-back: \n {}".format(traceback.format_exc()))
             raise
         else:

@@ -86,7 +86,9 @@ class Timeout():
     class Timeout(Exception): pass
 
     def __init__(self, sec):
-        self.sec = ceil(sec)
+        self.sec = sec
+        if self.sec < float('inf'):
+            self.sec = ceil(sec)
 
     def __enter__(self):
         if self.sec < float('inf'):
